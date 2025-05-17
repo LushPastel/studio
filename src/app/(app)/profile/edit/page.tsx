@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Using Card for structure
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, MailLock, Loader2 } from 'lucide-react';
+import { ChevronLeft, Mail, Loader2 } from 'lucide-react'; // Changed MailLock to Mail
 import Link from 'next/link';
 
 const profileFormSchema = z.object({
@@ -33,7 +33,8 @@ export default function EditProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentContactMethod, setCurrentContactMethod] = useState<'WhatsApp' | 'Instagram' | 'Telegram'>(user?.contactMethod || 'WhatsApp');
+  // Initialize with a static default, useEffect will set it from user data
+  const [currentContactMethod, setCurrentContactMethod] = useState<'WhatsApp' | 'Instagram' | 'Telegram'>('WhatsApp');
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -42,7 +43,7 @@ export default function EditProfilePage() {
       email: '',
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
-      contactMethod: 'WhatsApp',
+      contactMethod: 'WhatsApp', // Default for the form data model
       contactDetail: '',
     },
   });
@@ -57,9 +58,10 @@ export default function EditProfilePage() {
           email: user.email || '',
           gender: user.gender || 'Not Specified',
           ageRange: user.ageRange || 'Prefer not to say',
-          contactMethod: user.contactMethod || 'WhatsApp',
+          contactMethod: user.contactMethod || 'WhatsApp', // form data
           contactDetail: user.contactDetail || '',
         });
+        // State for Tabs component
         setCurrentContactMethod(user.contactMethod || 'WhatsApp');
       }
     }
@@ -67,18 +69,18 @@ export default function EditProfilePage() {
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
+    // Use currentContactMethod from state for the actual method,
+    // data.contactDetail is from the active tab's input
     const success = updateUser({
       name: data.name,
       gender: data.gender,
       ageRange: data.ageRange,
-      contactMethod: currentContactMethod, // Use state for contactMethod from Tabs
+      contactMethod: currentContactMethod, 
       contactDetail: data.contactDetail,
     });
 
     if (success) {
       toast({ title: "Profile Updated", description: "Your changes have been saved." });
-      // Optionally navigate back or reset form further if needed
-      // router.push('/profile'); 
     } else {
       toast({ variant: "destructive", title: "Update Failed", description: "Could not save your changes. Please try again." });
     }
@@ -87,7 +89,7 @@ export default function EditProfilePage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -125,7 +127,7 @@ export default function EditProfilePage() {
               <Label htmlFor="email" className="text-foreground/80">Email</Label>
               <div className="relative mt-1">
                 <Input id="email" {...form.register("email")} disabled className="bg-muted/50 border-input pl-3 pr-10" />
-                <MailLock className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" /> {/* Changed MailLock to Mail */}
               </div>
             </div>
             
@@ -178,7 +180,7 @@ export default function EditProfilePage() {
             <div>
               <Label className="text-foreground/80 mb-1 block">Contact Details</Label>
               <Tabs 
-                defaultValue={currentContactMethod} 
+                value={currentContactMethod} // Use value for controlled component
                 onValueChange={(value) => setCurrentContactMethod(value as 'WhatsApp' | 'Instagram' | 'Telegram')}
                 className="w-full"
               >
