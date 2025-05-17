@@ -8,23 +8,27 @@ import { cn } from '@/lib/utils';
 
 interface QuickActionCardProps {
   title: string;
+  description?: string; // Added optional description
   href: string;
   className?: string;
   iconType: 'dashboard' | 'wallet';
 }
 
-export function QuickActionCard({ title, href, className, iconType }: QuickActionCardProps) {
+export function QuickActionCard({ title, description, href, className, iconType }: QuickActionCardProps) {
   const Icon = iconType === 'dashboard' ? LayoutDashboard : Wallet;
   
   return (
     <Link href={href} passHref>
       <Card className={cn("shadow-lg hover:shadow-xl transition-shadow duration-300 group cursor-pointer", className)}>
-        <CardContent className="p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <Icon className="h-8 w-8 mb-2 opacity-80 group-hover:opacity-100 transition-opacity" />
-            <h4 className="text-2xl font-bold">{title}</h4>
+        <CardContent className="p-6 flex flex-col justify-between h-full"> {/* Ensure content fills card */}
+          <div className="flex items-center justify-between mb-2">
+            <Icon className="h-8 w-8 opacity-80 group-hover:opacity-100 transition-opacity" />
+            <ArrowRightCircle className="h-8 w-8 text-muted-foreground group-hover:text-foreground transition-colors" />
           </div>
-          <ArrowRightCircle className="h-8 w-8 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <div className="space-y-1 mt-auto"> {/* Push title and desc to bottom if card is taller */}
+            <h4 className="text-2xl font-bold">{title}</h4>
+            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          </div>
         </CardContent>
       </Card>
     </Link>
