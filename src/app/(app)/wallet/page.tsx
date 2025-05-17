@@ -4,10 +4,11 @@
 import { WithdrawalForm } from '@/components/wallet/withdrawal-form';
 import { WithdrawalHistory } from '@/components/wallet/withdrawal-history';
 import { BalanceCard } from '@/components/dashboard/balance-card'; 
+import { CoinProgressCard } from '@/components/wallet/CoinProgressCard'; // New import
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Hourglass } from 'lucide-react'; // Changed from Loader2
+import { Hourglass } from 'lucide-react';
 
 export default function WalletPage() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
@@ -38,11 +39,10 @@ export default function WalletPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-8"> {/* Added space-y-8 for consistent spacing */}
           <BalanceCard />
-          <div className="mt-8">
-            <WithdrawalForm />
-          </div>
+          <CoinProgressCard /> {/* Added CoinProgressCard here */}
+          <WithdrawalForm />
         </div>
         <div className="lg:col-span-2">
           <WithdrawalHistory />
