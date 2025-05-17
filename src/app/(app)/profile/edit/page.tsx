@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Using Card for structure
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, Mail, Loader2 } from 'lucide-react'; // Changed MailLock to Mail
+import { ChevronLeft, Mail, Hourglass } from 'lucide-react'; // Changed MailLock to Mail, Loader2 to Hourglass
 import Link from 'next/link';
 
 const profileFormSchema = z.object({
@@ -90,7 +90,7 @@ export default function EditProfilePage() {
   if (isLoadingAuth || !user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <Hourglass className="h-12 w-12 animate-spin text-primary" /> {/* Changed from Loader2 */}
         <p className="ml-4 text-lg text-foreground">Loading editor...</p>
       </div>
     );
@@ -128,7 +128,7 @@ export default function EditProfilePage() {
               <Label htmlFor="email" className="text-foreground/80">Email</Label>
               <div className="relative mt-1">
                 <Input id="email" {...form.register("email")} disabled className="bg-muted/50 border-input pl-3 pr-10" />
-                <Mail className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" /> {/* Changed MailLock to Mail */}
+                <Mail className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" /> 
               </div>
             </div>
             
@@ -181,7 +181,7 @@ export default function EditProfilePage() {
             <div>
               <Label className="text-foreground/80 mb-1 block">Contact Details</Label>
               <Tabs 
-                value={currentContactMethod} // Use value for controlled component
+                value={currentContactMethod} 
                 onValueChange={(value) => setCurrentContactMethod(value as 'WhatsApp' | 'Instagram' | 'Telegram')}
                 className="w-full"
               >
@@ -220,7 +220,7 @@ export default function EditProfilePage() {
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+              {isSubmitting ? <Hourglass className="mr-2 h-5 w-5 animate-spin" /> : null} {/* Changed from Loader2 */}
               {isSubmitting ? 'Updating...' : 'Update'}
             </Button>
           </form>

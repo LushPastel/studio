@@ -6,7 +6,7 @@ import { ApplyReferralCard } from '@/components/referrals/apply-referral-card';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Hourglass } from 'lucide-react'; // Changed from Loader2
 import { REFERRAL_BONUS } from '@/lib/constants';
 
 export default function ReferralsPage() {
@@ -22,7 +22,7 @@ export default function ReferralsPage() {
   if (isLoadingAuth || !user) {
      return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <Hourglass className="h-12 w-12 animate-spin text-primary" /> {/* Changed from Loader2 */}
         <p className="ml-4 text-lg">Loading referrals...</p>
       </div>
     );

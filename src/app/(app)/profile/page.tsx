@@ -4,7 +4,7 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2, UserCog, BellRing, Languages, Palette, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
+import { Hourglass, UserCog, BellRing, Languages, Palette, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react'; // Changed Loader2 to Hourglass
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -63,21 +63,17 @@ export default function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    // If the logout process has been initiated, let handleLogout manage the redirect.
     if (isLoggingOut) {
       return;
     }
-    // Otherwise, if not authenticated (and auth check is complete), redirect.
-    // This handles landing on the page unauthenticated.
     if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
   }, [isLoadingAuth, isAuthenticated, router, isLoggingOut]);
 
-  const handleLogout = () => { // Removed async as logout() is synchronous
+  const handleLogout = () => { 
     setIsLoggingOut(true);
     logout();
-    // Forcing an immediate redirect:
     router.push('/login');
   };
 
@@ -91,7 +87,7 @@ export default function ProfilePage() {
   if (isLoggingOut) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" /> {/* Changed from Loader2 */}
         <p className="text-lg text-foreground">Logging out...</p>
       </div>
     );
@@ -100,7 +96,7 @@ export default function ProfilePage() {
   if (isLoadingAuth || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" /> {/* Changed from Loader2 */}
         <p className="text-lg text-foreground">Loading profile...</p>
       </div>
     );
