@@ -24,10 +24,11 @@ interface User {
   name: string;
   password?: string; // Stored in LS, not in active user state object for security simulation
   balance: number;
-  coins: number; 
+  coins: number;
   referralCode: string;
+  referralsMade: number; // New field for leaderboard
   hasAppliedReferral?: boolean;
-  hasRatedApp?: boolean; // New field to track if user has rated the app
+  hasRatedApp?: boolean;
   // Profile fields
   gender?: 'Not Specified' | 'Male' | 'Female' | 'Other';
   ageRange?: 'Prefer not to say' | '18-24' | '25-34' | '35-44' | '45-54' | '55+';
@@ -46,19 +47,20 @@ export interface WithdrawalRequest {
 }
 
 interface AuthContextType {
-  user: User | null; 
+  user: User | null;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
   signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => void; 
-  spendCoins: (amount: number) => boolean; 
+  addCoins: (amount: number) => void;
+  spendCoins: (amount: number) => boolean;
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
+  getAllUsersForLeaderboard: () => User[]; // Helper for leaderboard
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({ coins: 0, hasRatedApp: false, ...userWithoutPassword } as User); // Default coins and hasRatedApp if not present
+          setUser({ coins: 0, hasRatedApp: false, referralsMade: 0, ...userWithoutPassword } as User); // Default coins, hasRatedApp, referralsMade if not present
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
           if (storedHistory) {
@@ -139,10 +141,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name,
       password: passwordInput,
       balance: 0,
-      coins: 0, 
+      coins: 0,
       referralCode: generateReferralCode(),
+      referralsMade: 0, // Initialize referralsMade
       hasAppliedReferral: false,
-      hasRatedApp: false, // Initialize hasRatedApp
+      hasRatedApp: false,
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
       contactMethod: 'WhatsApp',
@@ -158,20 +161,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let finalNewUser = { ...newUserBase };
 
     if (referralCodeInput) {
-      const referrer = allUsers.find(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
-      if (referrer) {
+      const referrerIndex = allUsers.findIndex(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
+      if (referrerIndex !== -1) {
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
         finalNewUser.hasAppliedReferral = true;
         toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
-
-        const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
-        if (referrerIndex !== -1) {
-          const updatedReferrer = {
-            ...allUsers[referrerIndex],
-            balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)),
-          };
-          allUsers[referrerIndex] = updatedReferrer;
-        }
+        
+        allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
+        allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
       } else {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
@@ -207,7 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-    setUser({ coins: 0, hasRatedApp: false, ...userToSet } as User); 
+    setUser({ coins: 0, hasRatedApp: false, referralsMade: 0, ...userToSet } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
@@ -257,7 +254,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addCoins = (amount: number) => {
     if (!user) return;
-    const newCoins = (user.coins || 0) + amount; 
+    const newCoins = (user.coins || 0) + amount;
     const updatedUserForState = { ...user, coins: newCoins };
     setUser(updatedUserForState);
 
@@ -335,9 +332,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     let allUsers = getAllUsers();
-    const referrer = allUsers.find(u => u.referralCode === code && u.id !== user.id);
+    const referrerIndex = allUsers.findIndex(u => u.referralCode === code && u.id !== user.id);
 
-    if (!referrer) {
+    if (referrerIndex === -1) {
       toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code is invalid or does not exist." });
       return false;
     }
@@ -348,21 +345,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         balance: applicantNewBalance,
         hasAppliedReferral: true
     };
-    setUser(applicantWithBonusForState); 
+    setUser(applicantWithBonusForState);
 
     const fullApplicantUserFromStorage = getFullUserFromStorage(user.id);
     if (fullApplicantUserFromStorage) {
         updateUserInStorage(user.id, { ...fullApplicantUserFromStorage, balance: applicantNewBalance, hasAppliedReferral: true});
     }
     
-    const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
-    if (referrerIndex !== -1) {
-        const referrerNewBalance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
-        const fullReferrerUserFromStorage = getFullUserFromStorage(referrer.id);
-        if (fullReferrerUserFromStorage) {
-            updateUserInStorage(referrer.id, {...fullReferrerUserFromStorage, balance: referrerNewBalance});
-        }
-    }
+    allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
+    allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
+    saveAllUsers(allUsers); // Save all users after updating referrer
     
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
     return true;
@@ -385,8 +377,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
+  const getAllUsersForLeaderboard = (): User[] => {
+    return getAllUsers();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, addCoins, spendCoins, requestWithdrawal, withdrawalHistory, applyReferral, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, addCoins, spendCoins, requestWithdrawal, withdrawalHistory, applyReferral, updateUser, getAllUsersForLeaderboard }}>
       {children}
     </AuthContext.Provider>
   );
