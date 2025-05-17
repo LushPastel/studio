@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { ShoppingBag, ArrowRight } from "lucide-react";
 import Image from 'next/image';
 
@@ -31,9 +31,8 @@ export function ShopPromoCard() {
       </div>
       <CardContent className="p-4 bg-card">
         <Link href="/shop" passHref>
-          <Button 
-            variant="outline" 
-            className="w-full border-primary text-primary hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_10px_1px_hsl(var(--primary))] transition-shadow duration-300"
+          <Button
+            className="w-full" // Uses default variant: bg-primary, text-primary-foreground
           >
             Explore Shop <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
