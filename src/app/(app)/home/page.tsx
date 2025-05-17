@@ -7,7 +7,7 @@ import React, { useEffect } from 'react';
 import { Hourglass, Gamepad2, TrendingUp, FileText, BarChartBig, Gift } from 'lucide-react'; // Added new icons
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
-import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; // Updated import
+import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; 
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
 
 // Custom text-based icons for specific offer cards
@@ -62,7 +62,7 @@ export default function HomePage() {
             title="Dashboard"
             description="View your streak calendar"
             href="/dashboard" 
-            className="bg-gradient-to-br from-primary/70 to-primary/40 text-primary-foreground hover:from-primary/80 hover:to-primary/50"
+            className="bg-card hover:bg-muted/50"
             iconType="dashboard" 
           />
           <QuickActionCard 
