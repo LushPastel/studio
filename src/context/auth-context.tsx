@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             coins: 0, 
             hasRatedApp: false, 
             referralsMade: 0,
-            weeklyReferralsMade: 0, // Initialize if not present
+            weeklyReferralsMade: 0, 
             ...userWithoutPassword 
           } as User);
           setIsAuthenticated(true);
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       coins: 0,
       referralCode: generateReferralCode(),
       referralsMade: 0,
-      weeklyReferralsMade: 0, // Initialize weekly referrals
+      weeklyReferralsMade: 0, 
       hasAppliedReferral: false,
       hasRatedApp: false,
       gender: 'Not Specified',
@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let finalNewUser = { ...newUserBase };
 
     if (referralCodeInput) {
-      const referrerIndex = allUsers.findIndex(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
+      const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === referralCodeInput.toUpperCase() && u.id !== finalNewUser.id);
       if (referrerIndex !== -1) {
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
         finalNewUser.hasAppliedReferral = true;
@@ -218,7 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         coins: 0, 
         hasRatedApp: false, 
         referralsMade: 0, 
-        weeklyReferralsMade: 0, // Initialize if not present
+        weeklyReferralsMade: 0, 
         ...userToSet 
     } as User);
     setIsAuthenticated(true);
@@ -239,7 +239,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
     }
-    // toast({ title: "Logged Out", description: "You have been successfully logged out." }); // Toast already on profile page
   };
 
   const getFullUserFromStorage = (userId: string): User | undefined => {
@@ -348,7 +347,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     let allUsers = getAllUsers();
-    const referrerIndex = allUsers.findIndex(u => u.referralCode === code && u.id !== user.id);
+    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === code.toUpperCase() && u.id !== user.id);
 
     if (referrerIndex === -1) {
       toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code is invalid or does not exist." });
@@ -378,7 +377,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
     allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
 
-    saveAllUsers(allUsers); // Save all users after updating referrer
+    saveAllUsers(allUsers); 
     
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
     return true;
@@ -412,24 +411,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
-    // Sort users by weeklyReferralsMade in descending order
     allUsers.sort((a, b) => (b.weeklyReferralsMade || 0) - (a.weeklyReferralsMade || 0));
 
-    const rewards = [100, 70, 50]; // Coins for 1st, 2nd, 3rd
+    const rewards = [100, 70, 50]; 
 
-    // Award winners
     for (let i = 0; i < Math.min(allUsers.length, 3); i++) {
-        if ((allUsers[i].weeklyReferralsMade || 0) > 0) { // Only reward if they made referrals
+        if ((allUsers[i].weeklyReferralsMade || 0) > 0) { 
             allUsers[i].coins = (allUsers[i].coins || 0) + rewards[i];
         }
     }
 
-    // Reset weeklyReferralsMade for all users
     allUsers = allUsers.map(u => ({ ...u, weeklyReferralsMade: 0 }));
 
     saveAllUsers(allUsers);
 
-    // Update current user state if they are logged in and affected
     if (user) {
         const updatedCurrentUser = allUsers.find(u => u.id === user.id);
         if (updatedCurrentUser) {
@@ -458,7 +453,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         applyReferral, 
         updateUser, 
         getAllUsersForLeaderboard,
-        processWeeklyLeaderboardReset // Expose the new function
+        processWeeklyLeaderboardReset 
     }}>
       {children}
     </AuthContext.Provider>
