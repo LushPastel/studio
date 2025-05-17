@@ -39,7 +39,7 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar" defaultOpen={true}>
+    <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2 text-primary">
             <TvMinimalPlayIcon className="h-8 w-8" />
