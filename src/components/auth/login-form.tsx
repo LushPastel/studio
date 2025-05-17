@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { LogIn, Mail, KeyRound } from 'lucide-react';
+import { APP_NAME } from '@/lib/constants';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -46,7 +47,7 @@ export function LoginForm() {
     <Card className="shadow-xl border-primary/20">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold text-primary">Welcome Back!</CardTitle>
-        <CardDescription>Sign in to continue to AdNeon</CardDescription>
+        <CardDescription>Sign in to continue to {APP_NAME}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
