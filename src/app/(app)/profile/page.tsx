@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // Imported useState
 import { Loader2, UserCircle, Mail, Gift, IndianRupee } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,13 +13,34 @@ import { Separator } from '@/components/ui/separator';
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // State for logout message
 
   useEffect(() => {
+    // If already logging out, don't process other redirects from this effect
+    if (isLoggingOut) return;
+
+    // Redirect to login if not authenticated and user data isn't available
     if (!isAuthenticated && user === null) {
       router.push('/login');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, isLoggingOut]);
 
+  const handleLogout = () => {
+    setIsLoggingOut(true); // Show "Logging out..." message
+    logout();
+    router.push('/login'); // Navigate to login page
+  };
+
+  if (isLoggingOut) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg">Logging out...</p>
+      </div>
+    );
+  }
+
+  // Show "Loading profile..." during initial load or if user data is missing (and not logging out)
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -29,11 +50,7 @@ export default function ProfilePage() {
     );
   }
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
-
+  // Render profile content if user data is available and not logging out
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <div className="text-center md:text-left">
@@ -94,9 +111,9 @@ export default function ProfilePage() {
              <Button variant="outline" className="w-full sm:w-auto">
               Change Password
             </Button>
-            <Button 
+            <Button
               onClick={handleLogout}
-              variant="destructive" 
+              variant="destructive"
               className="w-full sm:w-auto sm:ml-auto"
             >
               Log Out
