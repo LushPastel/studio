@@ -5,10 +5,10 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Hourglass } from 'lucide-react';
-import { ShopPromoCard } from '@/components/dashboard/shop-promo-card';
+import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard';
 import { DailyLogSection } from '@/components/dashboard/DailyLogSection';
-import { QuickActionCard } from '@/components/dashboard/quick-action-card';
-import { TrendingTaskItem } from '@/components/dashboard/trending-task-item';
+import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
+import { TrendingTaskItem } from '@/components/dashboard/TrendingTaskItem';
 import { Separator } from '@/components/ui/separator';
 
 export default function DashboardPage() {
@@ -96,4 +96,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
