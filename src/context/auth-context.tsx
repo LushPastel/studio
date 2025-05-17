@@ -26,7 +26,8 @@ interface User {
   balance: number;
   coins: number;
   referralCode: string;
-  referralsMade: number; // New field for leaderboard
+  referralsMade: number; 
+  weeklyReferralsMade: number; // New field for weekly leaderboard
   hasAppliedReferral?: boolean;
   hasRatedApp?: boolean;
   // Profile fields
@@ -60,7 +61,8 @@ interface AuthContextType {
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
-  getAllUsersForLeaderboard: () => User[]; // Helper for leaderboard
+  getAllUsersForLeaderboard: () => User[];
+  processWeeklyLeaderboardReset: () => void; // New function
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -109,7 +111,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({ coins: 0, hasRatedApp: false, referralsMade: 0, ...userWithoutPassword } as User); // Default coins, hasRatedApp, referralsMade if not present
+          setUser({ 
+            coins: 0, 
+            hasRatedApp: false, 
+            referralsMade: 0,
+            weeklyReferralsMade: 0, // Initialize if not present
+            ...userWithoutPassword 
+          } as User);
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
           if (storedHistory) {
@@ -143,7 +151,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       balance: 0,
       coins: 0,
       referralCode: generateReferralCode(),
-      referralsMade: 0, // Initialize referralsMade
+      referralsMade: 0,
+      weeklyReferralsMade: 0, // Initialize weekly referrals
       hasAppliedReferral: false,
       hasRatedApp: false,
       gender: 'Not Specified',
@@ -169,6 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
         allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
+        allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
       } else {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
@@ -204,7 +214,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-    setUser({ coins: 0, hasRatedApp: false, referralsMade: 0, ...userToSet } as User);
+    setUser({ 
+        coins: 0, 
+        hasRatedApp: false, 
+        referralsMade: 0, 
+        weeklyReferralsMade: 0, // Initialize if not present
+        ...userToSet 
+    } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
@@ -223,7 +239,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
     }
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    // toast({ title: "Logged Out", description: "You have been successfully logged out." }); // Toast already on profile page
   };
 
   const getFullUserFromStorage = (userId: string): User | undefined => {
@@ -339,6 +355,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    // Update applicant (current user)
     const applicantNewBalance = parseFloat((user.balance + REFERRAL_BONUS).toFixed(2));
     const applicantWithBonusForState = {
         ...user,
@@ -349,11 +366,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const fullApplicantUserFromStorage = getFullUserFromStorage(user.id);
     if (fullApplicantUserFromStorage) {
-        updateUserInStorage(user.id, { ...fullApplicantUserFromStorage, balance: applicantNewBalance, hasAppliedReferral: true});
+        updateUserInStorage(user.id, { 
+            ...fullApplicantUserFromStorage, 
+            balance: applicantNewBalance, 
+            hasAppliedReferral: true
+        });
     }
     
+    // Update referrer
     allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
     allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
+    allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
+
     saveAllUsers(allUsers); // Save all users after updating referrer
     
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
@@ -381,8 +405,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return getAllUsers();
   };
 
+  const processWeeklyLeaderboardReset = () => {
+    let allUsers = getAllUsers();
+    if (allUsers.length === 0) {
+        toast({ title: "Leaderboard", description: "No users to process." });
+        return;
+    }
+
+    // Sort users by weeklyReferralsMade in descending order
+    allUsers.sort((a, b) => (b.weeklyReferralsMade || 0) - (a.weeklyReferralsMade || 0));
+
+    const rewards = [100, 70, 50]; // Coins for 1st, 2nd, 3rd
+
+    // Award winners
+    for (let i = 0; i < Math.min(allUsers.length, 3); i++) {
+        if ((allUsers[i].weeklyReferralsMade || 0) > 0) { // Only reward if they made referrals
+            allUsers[i].coins = (allUsers[i].coins || 0) + rewards[i];
+        }
+    }
+
+    // Reset weeklyReferralsMade for all users
+    allUsers = allUsers.map(u => ({ ...u, weeklyReferralsMade: 0 }));
+
+    saveAllUsers(allUsers);
+
+    // Update current user state if they are logged in and affected
+    if (user) {
+        const updatedCurrentUser = allUsers.find(u => u.id === user.id);
+        if (updatedCurrentUser) {
+            const { password, ...userToSet } = updatedCurrentUser;
+            setUser(userToSet as User);
+        }
+    }
+
+    toast({ title: "Leaderboard Processed!", description: "Weekly winners awarded and leaderboard reset for the new week!" });
+  };
+
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, addCoins, spendCoins, requestWithdrawal, withdrawalHistory, applyReferral, updateUser, getAllUsersForLeaderboard }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        isAuthenticated, 
+        isLoadingAuth, 
+        signup, 
+        login, 
+        logout, 
+        addBalance, 
+        addCoins, 
+        spendCoins, 
+        requestWithdrawal, 
+        withdrawalHistory, 
+        applyReferral, 
+        updateUser, 
+        getAllUsersForLeaderboard,
+        processWeeklyLeaderboardReset // Expose the new function
+    }}>
       {children}
     </AuthContext.Provider>
   );

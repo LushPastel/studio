@@ -11,7 +11,7 @@ import { Trophy } from 'lucide-react';
 interface UserForLeaderboard {
   id: string;
   name: string;
-  referralsMade: number;
+  weeklyReferralsMade: number; // Changed from referralsMade
 }
 
 export function LeaderboardTable() {
@@ -21,18 +21,22 @@ export function LeaderboardTable() {
   useEffect(() => {
     const users = getAllUsersForLeaderboard();
     const sortedUsers = users
-      .map(u => ({ id: u.id, name: u.name, referralsMade: u.referralsMade || 0 }))
-      .filter(u => u.referralsMade > 0) // Optionally, only show users with referrals
-      .sort((a, b) => b.referralsMade - a.referralsMade);
+      .map(u => ({ 
+        id: u.id, 
+        name: u.name, 
+        weeklyReferralsMade: u.weeklyReferralsMade || 0 // Use weekly referrals
+      }))
+      .filter(u => u.weeklyReferralsMade > 0) 
+      .sort((a, b) => b.weeklyReferralsMade - a.weeklyReferralsMade);
     setLeaderboardData(sortedUsers);
-  }, [getAllUsersForLeaderboard]);
+  }, [getAllUsersForLeaderboard, currentUser]); // Added currentUser to dependencies to refresh if they log in/out
 
   if (leaderboardData.length === 0) {
     return (
       <div className="text-center py-10">
         <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">The leaderboard is currently empty.</p>
-        <p className="text-sm text-muted-foreground">Start referring friends to climb the ranks!</p>
+        <p className="text-muted-foreground">The weekly leaderboard is currently empty.</p>
+        <p className="text-sm text-muted-foreground">Start referring friends this week to climb the ranks!</p>
       </div>
     );
   }
@@ -44,7 +48,7 @@ export function LeaderboardTable() {
           <TableRow>
             <TableHead className="w-[50px]">Rank</TableHead>
             <TableHead>User</TableHead>
-            <TableHead className="text-right">Referrals</TableHead>
+            <TableHead className="text-right">Weekly Referrals</TableHead> 
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -63,12 +67,12 @@ export function LeaderboardTable() {
                   <span>{user.name}</span>
                 </div>
               </TableCell>
-              <TableCell className="text-right font-semibold">{user.referralsMade}</TableCell>
+              <TableCell className="text-right font-semibold">{user.weeklyReferralsMade}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      {leaderboardData.length > 10 && <TableCaption>Showing top referrers.</TableCaption>}
+      {leaderboardData.length > 10 && <TableCaption>Showing top weekly referrers.</TableCaption>}
     </ScrollArea>
   );
 }
