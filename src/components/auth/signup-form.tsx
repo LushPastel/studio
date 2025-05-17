@@ -18,8 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Mail, KeyRound, Gift, User as UserIcon } from 'lucide-react';
-import React from 'react'; // Import React for useState
+import { UserPlus, Mail, KeyRound, Gift, User as UserIcon, Eye, EyeOff } from 'lucide-react';
+import React from 'react';
 import { APP_NAME } from '@/lib/constants';
 
 const formSchema = z.object({
@@ -37,6 +37,8 @@ export function SignupForm() {
   const { signup, applyReferral } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,15 +54,13 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     const signupSuccess = await signup(values.name, values.email, values.password);
-    
+
     if (signupSuccess) {
       if (values.referralCode) {
-        // applyReferral now uses the user from AuthContext, which should be set after successful signup
-        applyReferral(values.referralCode); 
+        applyReferral(values.referralCode);
       }
       router.push('/dashboard');
     } else {
-      // Error message is handled by toast in AuthContext, could clear fields here if desired
       form.resetField("password");
       form.resetField("confirmPassword");
     }
@@ -117,7 +117,20 @@ export function SignupForm() {
                   <FormControl>
                     <div className="relative">
                       <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-                      <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
+                        className="pl-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -133,7 +146,20 @@ export function SignupForm() {
                   <FormControl>
                      <div className="relative">
                       <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-                      <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
+                        className="pl-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none"
+                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -156,8 +182,8 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
               disabled={isLoading}
             >
