@@ -4,11 +4,13 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { Hourglass, Gamepad2, TrendingUp, FileText, BarChartBig, Gift } from 'lucide-react'; // Added new icons
+import { Hourglass, Gamepad2, TrendingUp, FileText, BarChartBig, Gift, Star } from 'lucide-react'; // Added Star icon
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
 import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; 
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
+import { useToast } from '@/hooks/use-toast';
+
 
 // Custom text-based icons for specific offer cards
 const OfferProIcon = () => <span className="font-black text-2xl leading-none">Offer<br/>.<br/>PRO</span>;
@@ -18,8 +20,9 @@ const NNIcon = () => <span className="font-black text-4xl">NN</span>;
 
 
 export default function HomePage() {
-  const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth, addCoins, updateUser } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoadingAuth && !isAuthenticated) {
@@ -35,6 +38,16 @@ export default function HomePage() {
       </div>
     );
   }
+
+  const handleRateUs = () => {
+    if (user && !user.hasRatedApp) {
+      addCoins(20);
+      updateUser({ hasRatedApp: true });
+      toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
+    } else if (user && user.hasRatedApp) {
+      toast({ title: "Already Rated", description: "You've already claimed this bonus!" });
+    }
+  };
   
   return (
     <div className="space-y-8">
@@ -175,11 +188,18 @@ export default function HomePage() {
             className="bg-pink-500 text-white"
             onClickAction={() => console.log('Bonus clicked')}
           />
-          <div className="flex items-center justify-center h-full p-4 rounded-2xl bg-card shadow-lg">
-            <p className="text-muted-foreground text-center">More bonus offers coming soon!</p>
-          </div>
+          <OfferCard
+            title="Rate Us"
+            subtitle={user?.hasRatedApp ? "Bonus Claimed!" : "Get 20 coins"}
+            icon={Star}
+            className="bg-yellow-500 text-white"
+            onClickAction={handleRateUs}
+            showStartButton={!user?.hasRatedApp}
+          />
         </div>
       </section>
     </div>
   );
 }
+
+    

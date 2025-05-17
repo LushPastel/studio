@@ -24,9 +24,10 @@ interface User {
   name: string;
   password?: string; // Stored in LS, not in active user state object for security simulation
   balance: number;
-  coins: number; // New field for coin balance
+  coins: number; 
   referralCode: string;
   hasAppliedReferral?: boolean;
+  hasRatedApp?: boolean; // New field to track if user has rated the app
   // Profile fields
   gender?: 'Not Specified' | 'Male' | 'Female' | 'Other';
   ageRange?: 'Prefer not to say' | '18-24' | '25-34' | '35-44' | '45-54' | '55+';
@@ -45,19 +46,19 @@ export interface WithdrawalRequest {
 }
 
 interface AuthContextType {
-  user: User | null; // User object without password
+  user: User | null; 
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
   signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => void; // New function
-  spendCoins: (amount: number) => boolean; // New function
+  addCoins: (amount: number) => void; 
+  spendCoins: (amount: number) => boolean; 
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
-  updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral' | 'coins'>>) => boolean;
+  updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,7 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({ coins: 0, ...userWithoutPassword } as User); // Default coins to 0 if not present
+          setUser({ coins: 0, hasRatedApp: false, ...userWithoutPassword } as User); // Default coins and hasRatedApp if not present
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
           if (storedHistory) {
@@ -138,9 +139,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name,
       password: passwordInput,
       balance: 0,
-      coins: 0, // Initialize coins
+      coins: 0, 
       referralCode: generateReferralCode(),
       hasAppliedReferral: false,
+      hasRatedApp: false, // Initialize hasRatedApp
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
       contactMethod: 'WhatsApp',
@@ -159,7 +161,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const referrer = allUsers.find(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
       if (referrer) {
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
-        // Potentially add coin bonus for referral too in future
         finalNewUser.hasAppliedReferral = true;
         toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
 
@@ -168,7 +169,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const updatedReferrer = {
             ...allUsers[referrerIndex],
             balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)),
-            // Potentially add coin bonus for referrer too
           };
           allUsers[referrerIndex] = updatedReferrer;
         }
@@ -207,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-    setUser({ coins: 0, ...userToSet } as User); // Default coins to 0 if not present
+    setUser({ coins: 0, hasRatedApp: false, ...userToSet } as User); 
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
@@ -257,7 +257,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addCoins = (amount: number) => {
     if (!user) return;
-    const newCoins = (user.coins || 0) + amount; // Ensure coins is a number
+    const newCoins = (user.coins || 0) + amount; 
     const updatedUserForState = { ...user, coins: newCoins };
     setUser(updatedUserForState);
 
@@ -368,7 +368,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  const updateUser = (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral' | 'coins'>>): boolean => {
+  const updateUser = (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>): boolean => {
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
       return false;
@@ -382,7 +382,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
     }
     
-    // No toast here, edit profile page handles its own toast
     return true;
   };
 
@@ -400,3 +399,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
