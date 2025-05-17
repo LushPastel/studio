@@ -3,130 +3,150 @@
 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react'; // Imported useState
-import { Loader2, UserCircle, Mail, Gift, IndianRupee } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Loader2, UserCog, BellRing, Languages, Palette, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast'; // For copy feedback
+
+interface ProfileListItemProps {
+  icon: React.ElementType;
+  text: string;
+  onClick?: () => void;
+  href?: string;
+  status?: string;
+  isDestructive?: boolean;
+}
+
+const ProfileListItem: React.FC<ProfileListItemProps> = ({ icon: Icon, text, onClick, href, status, isDestructive }) => {
+  const router = useRouter();
+  const commonClasses = "flex items-center space-x-4 p-4 w-full text-left";
+  const interactiveClasses = "hover:bg-muted/50 transition-colors rounded-md";
+
+  const content = (
+    <>
+      <Icon className={`h-6 w-6 ${isDestructive ? 'text-destructive' : 'text-primary'}`} />
+      <span className={`flex-1 text-sm font-medium ${isDestructive ? 'text-destructive' : 'text-foreground'}`}>{text}</span>
+      {status && <span className="text-xs text-muted-foreground">{status}</span>}
+      {!status && (onClick || href) && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={`${commonClasses} ${interactiveClasses}`}>
+        {content}
+      </Link>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button onClick={onClick} className={`${commonClasses} ${interactiveClasses}`}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={commonClasses}>
+      {content}
+    </div>
+  );
+};
+
+// Need to import Link for ProfileListItem if href is used
+import Link from 'next/link';
+
 
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // State for logout message
+  const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    // If already logging out, don't process other redirects from this effect
     if (isLoggingOut) return;
-
-    // Redirect to login if not authenticated and user data isn't available
     if (!isAuthenticated && user === null) {
       router.push('/login');
     }
   }, [isAuthenticated, user, router, isLoggingOut]);
 
   const handleLogout = () => {
-    setIsLoggingOut(true); // Show "Logging out..." message
+    setIsLoggingOut(true);
     logout();
-    router.push('/login'); // Navigate to login page
+    router.push('/login');
+  };
+
+  const handleCopyReferralCode = () => {
+    if (user?.referralCode) {
+      navigator.clipboard.writeText(user.referralCode);
+      toast({ title: "Referral Code Copied!", description: "Your referral code has been copied to the clipboard." });
+    }
   };
 
   if (isLoggingOut) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Logging out...</p>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg text-foreground">Logging out...</p>
       </div>
     );
   }
 
-  // Show "Loading profile..." during initial load or if user data is missing (and not logging out)
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Loading profile...</p>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg text-foreground">Loading profile...</p>
       </div>
     );
   }
 
-  // Render profile content if user data is available and not logging out
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
-      <div className="text-center md:text-left">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">
-          Your Profile
-        </h2>
-        <p className="text-muted-foreground">Manage your account details and settings.</p>
+    <div className="pb-8 max-w-2xl mx-auto px-2 sm:px-4">
+      {/* User Info Section */}
+      <div className="flex flex-col items-center py-8 space-y-3">
+        <Avatar className="h-24 w-24 border-2 border-primary">
+          <AvatarImage src={`https://placehold.co/100x100.png?text=${user.name.charAt(0)}`} alt={user.name} data-ai-hint="avatar person" />
+          <AvatarFallback className="text-4xl">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
+        <p className="text-sm text-muted-foreground">{user.email}</p>
+        <div className="flex items-center space-x-2 p-2 border border-dashed border-primary/50 rounded-md bg-muted/20 max-w-xs w-full">
+          <span className="text-xs font-mono text-primary truncate flex-1 text-center">{user.referralCode}</span>
+          <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} className="text-primary hover:bg-primary/10 h-7 w-7">
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <Card className="shadow-lg border-primary/20">
-        <CardHeader className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left">
-          <Avatar className="h-20 w-20 border-2 border-primary mb-4 sm:mb-0 sm:mr-6">
-            <AvatarImage src={`https://placehold.co/100x100.png?text=${user.name.charAt(0)}`} alt={user.name} data-ai-hint="avatar person" />
-            <AvatarFallback className="text-3xl">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <CardTitle className="text-2xl text-primary">{user.name}</CardTitle>
-            <CardDescription className="text-base">{user.email}</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Separator />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center space-x-3">
-              <IndianRupee className="h-5 w-5 text-accent" />
-              <div>
-                <p className="text-muted-foreground">Current Balance</p>
-                <p className="font-semibold text-foreground">₹{user.balance.toFixed(2)}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Gift className="h-5 w-5 text-accent" />
-              <div>
-                <p className="text-muted-foreground">Referral Code</p>
-                <p className="font-mono text-foreground">{user.referralCode}</p>
-              </div>
-            </div>
-             <div className="flex items-center space-x-3">
-              <UserCircle className="h-5 w-5 text-accent" />
-              <div>
-                <p className="text-muted-foreground">User ID</p>
-                <p className="font-mono text-xs text-foreground">{user.id}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Mail className="h-5 w-5 text-accent" />
-               <div>
-                <p className="text-muted-foreground">Email Verified</p>
-                <p className="font-semibold text-foreground">Yes (Simulated)</p>
-              </div>
-            </div>
-          </div>
-          <Separator />
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary/10">
-              Edit Profile
-            </Button>
-             <Button variant="outline" className="w-full sm:w-auto">
-              Change Password
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="destructive"
-              className="w-full sm:w-auto sm:ml-auto"
-            >
-              Log Out
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Separator className="my-4" />
 
-       {/* Placeholder for other profile sections like settings, activity log, etc. */}
-        {/* <Card className="mt-8">
-          <CardHeader><CardTitle>Account Settings</CardTitle></CardHeader>
-          <CardContent><p className="text-muted-foreground">Settings options will appear here.</p></CardContent>
-        </Card> */}
+      {/* Settings List Section */}
+      <div className="space-y-1">
+        <ProfileListItem icon={UserCog} text="Edit Profile" onClick={() => toast({ title: "Coming Soon", description: "Profile editing will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={KeyRound} text="Change Password" onClick={() => toast({ title: "Coming Soon", description: "Password change functionality will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={BellRing} text="Notification Settings" onClick={() => toast({ title: "Coming Soon", description: "Notification settings will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={Languages} text="App Language" onClick={() => toast({ title: "Coming Soon", description: "Language selection will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={Palette} text="Theme" status="Coming Soon" />
+        <Separator />
+        <ProfileListItem icon={History} text="Reward History" href="/wallet" />
+        <Separator />
+        <ProfileListItem icon={HelpCircle} text="Get Help" onClick={() => toast({ title: "Coming Soon", description: "Help & Support section will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={FileText} text="Terms and Conditions" onClick={() => toast({ title: "Coming Soon", description: "Terms & Conditions will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={ShieldCheck} text="Privacy Policy" onClick={() => toast({ title: "Coming Soon", description: "Privacy Policy will be available soon."})} />
+        <Separator />
+        <ProfileListItem icon={LogOut} text="Log Out" onClick={handleLogout} isDestructive />
+      </div>
     </div>
   );
 }
+
