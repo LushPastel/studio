@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/context/auth-context';
 import { CheckCircle, UserPlus } from "lucide-react";
+import { useState } from 'react'; // Added import
 
 const formSchema = z.object({
   referralCode: z.string().min(6, { message: 'Referral code must be at least 6 characters.' }),
