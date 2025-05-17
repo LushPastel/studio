@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -14,7 +15,7 @@ export function ReferralPromoCard() {
           <Users className="mr-2 h-6 w-6" /> Refer & Earn
         </CardTitle>
         <CardDescription>
-          Invite friends to AdNeon and you both earn ₹{REFERRAL_BONUS.toFixed(2)}!
+          Invite friends to AdPlay and you both earn ₹{REFERRAL_BONUS.toFixed(2)}!
         </CardDescription>
       </CardHeader>
       <CardContent>
