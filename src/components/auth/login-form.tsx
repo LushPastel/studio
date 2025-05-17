@@ -20,6 +20,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { LogIn, Mail, KeyRound } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
+import React from 'react'; // Added React import
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
