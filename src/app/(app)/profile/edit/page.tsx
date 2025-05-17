@@ -90,8 +90,8 @@ export default function EditProfilePage() {
   if (isLoadingAuth || !user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Hourglass className="h-12 w-12 animate-spin text-primary" /> {/* Changed from Loader2 */}
-        <p className="ml-4 text-lg text-foreground">Loading editor...</p>
+        <Hourglass className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
@@ -220,7 +220,7 @@ export default function EditProfilePage() {
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Hourglass className="mr-2 h-5 w-5 animate-spin" /> : null} {/* Changed from Loader2 */}
+              {isSubmitting ? <Hourglass className="mr-2 h-5 w-5 animate-spin" /> : null}
               {isSubmitting ? 'Updating...' : 'Update'}
             </Button>
           </form>

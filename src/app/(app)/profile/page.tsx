@@ -97,7 +97,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
         <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-lg text-foreground">Loading profile...</p>
+        <p className="text-lg text-foreground">Loading...</p>
       </div>
     );
   }
