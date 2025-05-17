@@ -20,6 +20,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { UserPlus, Mail, KeyRound, Gift, User as UserIcon } from 'lucide-react';
 import React from 'react'; // Import React for useState
+import { APP_NAME } from '@/lib/constants';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -70,7 +71,7 @@ export function SignupForm() {
     <Card className="shadow-xl border-primary/20">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold text-primary">Create Account</CardTitle>
-        <CardDescription>Join AdPlay and start earning!</CardDescription>
+        <CardDescription>Join {APP_NAME} and start earning!</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -84,7 +85,7 @@ export function SignupForm() {
                   <FormControl>
                     <div className="relative">
                       <UserIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-                      <Input placeholder="John Doe" {...field} className="pl-10" />
+                      <Input placeholder="Name" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />
