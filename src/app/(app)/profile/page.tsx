@@ -8,7 +8,7 @@ import { Loader2, UserCog, BellRing, Languages, Palette, History, HelpCircle, Fi
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast'; 
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 interface ProfileListItemProps {
@@ -63,20 +63,22 @@ export default function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (isLoggingOut) return;
+    // If the logout process has been initiated, let handleLogout manage the redirect.
+    if (isLoggingOut) {
+      return;
+    }
+    // Otherwise, if not authenticated (and auth check is complete), redirect.
+    // This handles landing on the page unauthenticated.
     if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
   }, [isLoadingAuth, isAuthenticated, router, isLoggingOut]);
 
-  const handleLogout = async () => {
+  const handleLogout = () => { // Removed async as logout() is synchronous
     setIsLoggingOut(true);
-    await logout(); // Assuming logout might be async or have side effects handled by AuthProvider
-    // The useEffect above will handle the redirect after logout state is updated in AuthContext.
-    // If logout itself handles redirect, this router.push might be redundant or even 
-    // conflict if AuthContext also tries to redirect.
+    logout();
     // Forcing an immediate redirect:
-    // router.push('/login'); 
+    router.push('/login');
   };
 
   const handleCopyReferralCode = () => {
