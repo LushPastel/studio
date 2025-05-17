@@ -32,7 +32,7 @@ export interface WithdrawalRequest {
 interface AuthContextType {
   user: User | null; // User object without password
   isAuthenticated: boolean;
-  signup: (name: string, email: string, passwordInput: string) => Promise<boolean>;
+  signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
@@ -85,15 +85,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const signup = async (name: string, email: string, passwordInput: string): Promise<boolean> => {
-    const users = getAllUsers();
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+  const signup = async (name: string, email: string, passwordInput: string, referralCodeInput?: string): Promise<boolean> => {
+    let allUsers = getAllUsers();
+    if (allUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
       toast({ variant: "destructive", title: "Signup Failed", description: "Email already registered. Please log in." });
       return false;
     }
 
     // IMPORTANT: In a real app, hash the password before storing.
-    const newUser: User = {
+    const newUserBase: User = {
       id: `user-${Date.now()}`,
       email,
       name,
@@ -103,13 +103,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       hasAppliedReferral: false,
     };
 
-    const updatedUsers = [...users, newUser];
-    saveAllUsers(updatedUsers);
+    let finalNewUser = { ...newUserBase }; // Work with a mutable copy for referral modifications
 
-    const { password, ...userToSet } = newUser;
+    if (referralCodeInput) {
+      const referrer = allUsers.find(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
+
+      if (referrer) {
+        // Apply bonus to new user (applicant)
+        finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
+        finalNewUser.hasAppliedReferral = true;
+        toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus for signing up with a referral code!` });
+
+        // Apply bonus to referrer and update them in the allUsers array
+        const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
+        if (referrerIndex !== -1) { // Should always be found if referrer object exists
+          const updatedReferrer = {
+            ...allUsers[referrerIndex],
+            balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)),
+          };
+          allUsers[referrerIndex] = updatedReferrer;
+        }
+      } else {
+        toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered during signup was invalid. Signup will proceed without this bonus." });
+      }
+    }
+    
+    // Add the final (potentially modified by referral) new user to the list and save
+    const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser]; // Filter to avoid duplicates if referrer logic somehow re-added
+    saveAllUsers(updatedUsersArray);
+
+    const { password, ...userToSet } = finalNewUser;
     setUser(userToSet as User);
     setIsAuthenticated(true);
-    localStorage.setItem(LS_CURRENT_USER_ID_KEY, newUser.id);
+    localStorage.setItem(LS_CURRENT_USER_ID_KEY, finalNewUser.id);
     setWithdrawalHistory([]); // Reset history for new user
 
     toast({ title: "Signup Successful", description: `Welcome, ${name}!` });
@@ -153,14 +179,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
-  // Helper to update the user's details in the LS_USERS_KEY storage
-  const updateUserInStorage = (userToUpdate: User) => {
+  // Helper to update a user's details in the LS_USERS_KEY storage
+  // This ensures the password from storage is preserved if not explicitly changed
+  const updateUserInStorage = (userToUpdate: Omit<User, 'password'> & { password?: string }) => {
     const users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userToUpdate.id);
     if (userIndex !== -1) {
-      // Preserve the stored password, as userToUpdate might not have it
-      const existingPassword = users[userIndex].password;
-      users[userIndex] = { ...users[userIndex], ...userToUpdate, password: existingPassword };
+      const existingUser = users[userIndex];
+      users[userIndex] = { 
+        ...existingUser, // Start with existing stored user (has password)
+        ...userToUpdate, // Override with new details
+        password: userToUpdate.password || existingUser.password // Preserve old password if new one not provided
+      };
       saveAllUsers(users);
     }
   };
@@ -210,7 +240,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const applyReferral = (code: string): boolean => {
-    if (!user) {
+    if (!user) { // Current user trying to apply the code
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply a referral code." });
       return false;
     }
@@ -219,25 +249,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    const users = getAllUsers();
-    const referrer = users.find(u => u.referralCode === code && u.id !== user.id);
+    let allUsers = getAllUsers();
+    const referrer = allUsers.find(u => u.referralCode === code && u.id !== user.id);
 
     if (!referrer) {
       toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code is invalid or does not exist." });
       return false;
     }
 
-    // Apply bonus to current user (applicant)
-    const applicantWithBonus = { ...user, balance: parseFloat((user.balance + REFERRAL_BONUS).toFixed(2)), hasAppliedReferral: true };
-    setUser(applicantWithBonus);
-    updateUserInStorage(applicantWithBonus); // Persist applicant's update
-    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
+    // Update applicant (current user) in the allUsers array
+    const applicantIndex = allUsers.findIndex(u => u.id === user.id);
+    if (applicantIndex === -1) { 
+        toast({ variant: "destructive", title: "Error", description: "Critical: Could not find current user to apply bonus." });
+        return false;
+    }
+    const applicantWithBonus = {
+        ...allUsers[applicantIndex],
+        balance: parseFloat((allUsers[applicantIndex].balance + REFERRAL_BONUS).toFixed(2)),
+        hasAppliedReferral: true
+    };
+    allUsers[applicantIndex] = applicantWithBonus;
 
-    // Apply bonus to referrer
-    const referrerWithBonus = { ...referrer, balance: parseFloat((referrer.balance + REFERRAL_BONUS).toFixed(2)) };
-    updateUserInStorage(referrerWithBonus); // Persist referrer's update
-    console.log(`User ${referrer.name} (referrer) also received a ₹${REFERRAL_BONUS.toFixed(2)} bonus.`);
+    // Update referrer in the allUsers array
+    const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
+    // No need to check referrerIndex again, already found referrer object
+    const updatedReferrer = {
+        ...allUsers[referrerIndex],
+        balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2))
+    };
+    allUsers[referrerIndex] = updatedReferrer;
+
+    saveAllUsers(allUsers); // Save all changes to localStorage
+
+    // Update React state for the current user (applicant)
+    // Destructure password before setting to React state
+    const { password: PwFromApplicant, ...applicantToSetInState } = applicantWithBonus; 
+    setUser(applicantToSetInState as User); 
     
+    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
     return true;
   };
 
@@ -255,3 +304,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

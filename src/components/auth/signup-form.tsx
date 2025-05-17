@@ -50,7 +50,7 @@ const formSchema = z.object({
 });
 
 export function SignupForm() {
-  const { signup, applyReferral } = useAuth();
+  const { signup } = useAuth(); // Removed applyReferral as it's handled in signup
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -69,14 +69,15 @@ export function SignupForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const signupSuccess = await signup(values.name, values.email, values.password);
+    // Pass referral code directly to the signup function
+    const signupSuccess = await signup(values.name, values.email, values.password, values.referralCode);
 
     if (signupSuccess) {
-      if (values.referralCode) {
-        applyReferral(values.referralCode);
-      }
+      // No longer need to call applyReferral here, it's handled within signup
       router.push('/dashboard');
     } else {
+      // If signup fails (e.g. email exists), an error toast is shown by AuthContext
+      // Reset password fields for security/UX
       form.resetField("password");
       form.resetField("confirmPassword");
     }
@@ -243,3 +244,4 @@ export function SignupForm() {
     </Card>
   );
 }
+
