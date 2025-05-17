@@ -168,14 +168,16 @@ export default function HomePage() {
       {/* Bonus Offers Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Bonus Offers</h3>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
            <OfferCard 
             title="Special Bonus" 
             icon={Gift}
             className="bg-pink-500 text-white"
             onClickAction={() => console.log('Bonus clicked')}
           />
-          <p className="text-muted-foreground col-span-2 pt-4">More bonus offers coming soon!</p>
+          <div className="flex items-center justify-center h-full p-4 rounded-2xl bg-card shadow-lg">
+            <p className="text-muted-foreground text-center">More bonus offers coming soon!</p>
+          </div>
         </div>
       </section>
     </div>
