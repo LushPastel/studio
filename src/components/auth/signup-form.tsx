@@ -119,7 +119,7 @@ export function SignupForm() {
                       <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder="Password"
                         {...field}
                         className="pl-10 pr-10"
                       />
@@ -148,7 +148,7 @@ export function SignupForm() {
                       <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder="Confirm Password"
                         {...field}
                         className="pl-10 pr-10"
                       />
