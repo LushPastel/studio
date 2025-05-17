@@ -24,6 +24,7 @@ interface User {
   name: string;
   password?: string; // Stored in LS, not in active user state object for security simulation
   balance: number;
+  coins: number; // New field for coin balance
   referralCode: string;
   hasAppliedReferral?: boolean;
   // Profile fields
@@ -51,10 +52,12 @@ interface AuthContextType {
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
+  addCoins: (amount: number) => void; // New function
+  spendCoins: (amount: number) => boolean; // New function
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
-  updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral'>>) => boolean;
+  updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral' | 'coins'>>) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser(userWithoutPassword as User);
+          setUser({ coins: 0, ...userWithoutPassword } as User); // Default coins to 0 if not present
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
           if (storedHistory) {
@@ -135,14 +138,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name,
       password: passwordInput,
       balance: 0,
+      coins: 0, // Initialize coins
       referralCode: generateReferralCode(),
       hasAppliedReferral: false,
-      // Initialize profile fields
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
       contactMethod: 'WhatsApp',
       contactDetail: '',
-      notificationPreferences: { // Initialize notification preferences
+      notificationPreferences: {
         offers: true,
         promo: true,
         payments: true,
@@ -156,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const referrer = allUsers.find(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
       if (referrer) {
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
+        // Potentially add coin bonus for referral too in future
         finalNewUser.hasAppliedReferral = true;
         toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
 
@@ -164,6 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const updatedReferrer = {
             ...allUsers[referrerIndex],
             balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)),
+            // Potentially add coin bonus for referrer too
           };
           allUsers[referrerIndex] = updatedReferrer;
         }
@@ -202,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-    setUser(userToSet as User);
+    setUser({ coins: 0, ...userToSet } as User); // Default coins to 0 if not present
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
@@ -224,7 +229,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
-  // Helper to get a user with their stored password from localStorage
   const getFullUserFromStorage = (userId: string): User | undefined => {
     const users = getAllUsers();
     return users.find(u => u.id === userId);
@@ -234,7 +238,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
-      // Merge, preserving stored password if not explicitly provided in updatedDetails
       users[userIndex] = { ...users[userIndex], ...updatedDetails };
       saveAllUsers(users);
     }
@@ -246,12 +249,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const updatedUserForState = { ...user, balance: newBalance };
     setUser(updatedUserForState);
     
-    // For storage, ensure we are merging with the full user object that includes password
     const fullUserFromStorage = getFullUserFromStorage(user.id);
     if (fullUserFromStorage) {
         updateUserInStorage(user.id, { ...fullUserFromStorage, balance: newBalance });
     }
   };
+
+  const addCoins = (amount: number) => {
+    if (!user) return;
+    const newCoins = (user.coins || 0) + amount; // Ensure coins is a number
+    const updatedUserForState = { ...user, coins: newCoins };
+    setUser(updatedUserForState);
+
+    const fullUserFromStorage = getFullUserFromStorage(user.id);
+    if (fullUserFromStorage) {
+      updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+    }
+  };
+
+  const spendCoins = (amount: number): boolean => {
+    if (!user || (user.coins || 0) < amount) {
+      toast({ variant: "destructive", title: "Not enough coins", description: "You don't have enough coins for this purchase." });
+      return false;
+    }
+    const newCoins = (user.coins || 0) - amount;
+    const updatedUserForState = { ...user, coins: newCoins };
+    setUser(updatedUserForState);
+
+    const fullUserFromStorage = getFullUserFromStorage(user.id);
+    if (fullUserFromStorage) {
+      updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+    }
+    return true;
+  };
+
 
   const requestWithdrawal = (amount: number): boolean => {
     if (!user) {
@@ -311,21 +342,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // Update applicant (current user)
     const applicantNewBalance = parseFloat((user.balance + REFERRAL_BONUS).toFixed(2));
     const applicantWithBonusForState = {
         ...user,
         balance: applicantNewBalance,
         hasAppliedReferral: true
     };
-    setUser(applicantWithBonusForState); // Update context state
+    setUser(applicantWithBonusForState); 
 
     const fullApplicantUserFromStorage = getFullUserFromStorage(user.id);
     if (fullApplicantUserFromStorage) {
         updateUserInStorage(user.id, { ...fullApplicantUserFromStorage, balance: applicantNewBalance, hasAppliedReferral: true});
     }
     
-    // Update referrer
     const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
     if (referrerIndex !== -1) {
         const referrerNewBalance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
@@ -339,7 +368,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  const updateUser = (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral'>>): boolean => {
+  const updateUser = (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral' | 'coins'>>): boolean => {
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
       return false;
@@ -353,12 +382,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
     }
     
-    toast({ title: "Profile Updated", description: "Your profile details have been successfully updated." });
+    // No toast here, edit profile page handles its own toast
     return true;
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, requestWithdrawal, withdrawalHistory, applyReferral, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, addCoins, spendCoins, requestWithdrawal, withdrawalHistory, applyReferral, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -371,5 +400,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

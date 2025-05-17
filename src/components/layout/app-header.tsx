@@ -2,22 +2,19 @@
 "use client";
 
 import Link from 'next/link';
-import { TvMinimalPlayIcon } from 'lucide-react';
+import { Coins, TvMinimalPlayIcon } from 'lucide-react'; // Added Coins icon
 import { useAuth } from '@/context/auth-context';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 export function AppHeader() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
 
   // This logic helps show a minimal header on protected routes if auth is still loading
   // or if the user is somehow unauthenticated on a protected route.
-  // It can be refined based on specific route protection strategies.
-  const isPotentiallyProtectedRouteContext = true; // Simplified assumption for header visibility
-  const showMinimalHeader = isPotentiallyProtectedRouteContext && !isAuthenticated && user === null;
+  const showMinimalHeader = !isLoadingAuth && !isAuthenticated && user === null;
 
-  if (showMinimalHeader) {
-    // Render a placeholder or minimal header to maintain layout consistency during auth checks
+  if (showMinimalHeader && !isAuthenticated) { // Check !isAuthenticated for robustness
     return <header className="sticky top-0 z-50 w-full border-b bg-background/95 h-16"></header>;
   }
 
@@ -36,7 +33,13 @@ export function AppHeader() {
             {APP_NAME}
           </span>
         </Link>
-        {/* User profile dropdown and mobile menu were removed in a previous step */}
+
+        {isAuthenticated && user && !isLoadingAuth && (
+          <div className="flex items-center space-x-2 text-foreground">
+            <Coins className="h-5 w-5 text-yellow-400" />
+            <span className="font-semibold text-lg">{user.coins?.toLocaleString() || 0}</span>
+          </div>
+        )}
       </div>
     </header>
   );
