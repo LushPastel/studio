@@ -11,6 +11,13 @@ const LS_USERS_KEY = 'adplay-users';
 const LS_CURRENT_USER_ID_KEY = 'adplay-current-user-id';
 const LS_WITHDRAWAL_HISTORY_PREFIX = 'adplay-withdrawal-';
 
+interface NotificationPreferences {
+  offers: boolean;
+  promo: boolean;
+  payments: boolean;
+  updates: boolean;
+}
+
 interface User {
   id: string;
   email: string;
@@ -19,11 +26,13 @@ interface User {
   balance: number;
   referralCode: string;
   hasAppliedReferral?: boolean;
-  // New fields for profile
+  // Profile fields
   gender?: 'Not Specified' | 'Male' | 'Female' | 'Other';
   ageRange?: 'Prefer not to say' | '18-24' | '25-34' | '35-44' | '45-54' | '55+';
   contactMethod?: 'WhatsApp' | 'Instagram' | 'Telegram';
   contactDetail?: string;
+  // Notification preferences
+  notificationPreferences?: NotificationPreferences;
 }
 
 export interface WithdrawalRequest {
@@ -45,7 +54,7 @@ interface AuthContextType {
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
-  updateUser: (updatedDetails: Partial<Pick<User, 'name' | 'gender' | 'ageRange' | 'contactMethod' | 'contactDetail'>>) => boolean;
+  updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral'>>) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -128,11 +137,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       balance: 0,
       referralCode: generateReferralCode(),
       hasAppliedReferral: false,
-      // Initialize new profile fields
+      // Initialize profile fields
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
       contactMethod: 'WhatsApp',
       contactDetail: '',
+      notificationPreferences: { // Initialize notification preferences
+        offers: true,
+        promo: true,
+        payments: true,
+        updates: true,
+      },
     };
 
     let finalNewUser = { ...newUserBase };
@@ -209,11 +224,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
-  const updateUserInStorage = (userToUpdate: User) => { // Expect full User object for internal consistency
+  // Helper to get a user with their stored password from localStorage
+  const getFullUserFromStorage = (userId: string): User | undefined => {
     const users = getAllUsers();
-    const userIndex = users.findIndex(u => u.id === userToUpdate.id);
+    return users.find(u => u.id === userId);
+  };
+
+  const updateUserInStorage = (userId: string, updatedDetails: Partial<User>) => {
+    const users = getAllUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
-      users[userIndex] = { ...users[userIndex], ...userToUpdate }; // Merge, preserving stored password
+      // Merge, preserving stored password if not explicitly provided in updatedDetails
+      users[userIndex] = { ...users[userIndex], ...updatedDetails };
       saveAllUsers(users);
     }
   };
@@ -221,9 +243,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const addBalance = (amount: number) => {
     if (!user) return;
     const newBalance = parseFloat((user.balance + amount).toFixed(2));
-    const updatedUser = { ...user, balance: newBalance };
-    setUser(updatedUser);
-    updateUserInStorage(updatedUser);
+    const updatedUserForState = { ...user, balance: newBalance };
+    setUser(updatedUserForState);
+    
+    // For storage, ensure we are merging with the full user object that includes password
+    const fullUserFromStorage = getFullUserFromStorage(user.id);
+    if (fullUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullUserFromStorage, balance: newBalance });
+    }
   };
 
   const requestWithdrawal = (amount: number): boolean => {
@@ -241,9 +268,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const newBalance = parseFloat((user.balance - amount).toFixed(2));
-    const updatedUser = { ...user, balance: newBalance };
-    setUser(updatedUser);
-    updateUserInStorage(updatedUser);
+    const updatedUserForState = { ...user, balance: newBalance };
+    setUser(updatedUserForState);
+
+    const fullUserFromStorage = getFullUserFromStorage(user.id);
+     if (fullUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullUserFromStorage, balance: newBalance });
+    }
 
     const newRequest: WithdrawalRequest = {
       id: `wd-${Date.now()}`,
@@ -281,46 +312,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Update applicant (current user)
-    const applicantWithBonus = {
+    const applicantNewBalance = parseFloat((user.balance + REFERRAL_BONUS).toFixed(2));
+    const applicantWithBonusForState = {
         ...user,
-        balance: parseFloat((user.balance + REFERRAL_BONUS).toFixed(2)),
+        balance: applicantNewBalance,
         hasAppliedReferral: true
     };
-    setUser(applicantWithBonus); // Update context state
-    updateUserInStorage(applicantWithBonus); // Update applicant in localStorage
+    setUser(applicantWithBonusForState); // Update context state
 
+    const fullApplicantUserFromStorage = getFullUserFromStorage(user.id);
+    if (fullApplicantUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullApplicantUserFromStorage, balance: applicantNewBalance, hasAppliedReferral: true});
+    }
+    
     // Update referrer
     const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
     if (referrerIndex !== -1) {
-        const updatedReferrer = {
-            ...allUsers[referrerIndex],
-            balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2))
-        };
-        // To save this, we need to update the `allUsers` array and save it.
-        // The `updateUserInStorage` is for the current user. Let's refine this part.
-        const usersCopy = [...allUsers];
-        usersCopy[referrerIndex] = updatedReferrer;
-        // Also update the applicant in this copied array before saving
-        const applicantIdxInAllUsers = usersCopy.findIndex(u => u.id === applicantWithBonus.id);
-        if (applicantIdxInAllUsers !== -1) {
-            usersCopy[applicantIdxInAllUsers] = applicantWithBonus;
+        const referrerNewBalance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
+        const fullReferrerUserFromStorage = getFullUserFromStorage(referrer.id);
+        if (fullReferrerUserFromStorage) {
+            updateUserInStorage(referrer.id, {...fullReferrerUserFromStorage, balance: referrerNewBalance});
         }
-        saveAllUsers(usersCopy);
     }
     
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
     return true;
   };
 
-  const updateUser = (updatedDetails: Partial<Pick<User, 'name' | 'gender' | 'ageRange' | 'contactMethod' | 'contactDetail'>>): boolean => {
+  const updateUser = (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'hasAppliedReferral'>>): boolean => {
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
       return false;
     }
 
-    const newProfileData = { ...user, ...updatedDetails };
-    setUser(newProfileData);
-    updateUserInStorage(newProfileData); // This now takes the full User object
+    const updatedUserForState = { ...user, ...updatedDetails };
+    setUser(updatedUserForState);
+
+    const fullUserFromStorage = getFullUserFromStorage(user.id);
+    if (fullUserFromStorage) {
+         updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
+    }
     
     toast({ title: "Profile Updated", description: "Your profile details have been successfully updated." });
     return true;
@@ -340,3 +371,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

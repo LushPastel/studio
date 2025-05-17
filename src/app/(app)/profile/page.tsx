@@ -4,7 +4,7 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Hourglass, UserCog, BellRing, Languages, Palette, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react'; // Changed Loader2 to Hourglass
+import { Hourglass, UserCog, BellRing, Languages, Palette, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -87,7 +87,7 @@ export default function ProfilePage() {
   if (isLoggingOut) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
-        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" /> {/* Changed from Loader2 */}
+        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" />
         <p className="text-lg text-foreground">Logging out...</p>
       </div>
     );
@@ -96,7 +96,7 @@ export default function ProfilePage() {
   if (isLoadingAuth || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
-        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" /> {/* Changed from Loader2 */}
+        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" />
         <p className="text-lg text-foreground">Loading profile...</p>
       </div>
     );
@@ -126,7 +126,7 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={KeyRound} text="Change Password" onClick={() => toast({ title: "Coming Soon", description: "Password change functionality will be available soon."})} />
         <Separator />
-        <ProfileListItem icon={BellRing} text="Notification Settings" onClick={() => toast({ title: "Coming Soon", description: "Notification settings will be available soon."})} />
+        <ProfileListItem icon={BellRing} text="Notification Settings" href="/profile/notification-settings" />
         <Separator />
         <ProfileListItem icon={Languages} text="App Language" onClick={() => toast({ title: "Coming Soon", description: "Language selection will be available soon."})} />
         <Separator />
@@ -145,3 +145,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
