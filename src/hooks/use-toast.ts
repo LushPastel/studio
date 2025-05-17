@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -9,7 +10,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 500 // Adjusted for animations after duration expiry
 
 type ToasterToast = ToastProps & {
   id: string
@@ -161,6 +162,7 @@ function toast({ ...props }: Toast) {
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
+      duration: 3000, // Auto-dismiss after 3 seconds
     },
   })
 
