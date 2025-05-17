@@ -1,0 +1,110 @@
+"use client";
+
+import Link from 'next/link';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import { LogIn, Mail, KeyRound } from 'lucide-react';
+
+const formSchema = z.object({
+  email: z.string().email({ message: 'Invalid email address.' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+});
+
+export function LoginForm() {
+  const { login } = useAuth();
+  const router = useRouter();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    // Simulate login
+    login(values.email, values.email.split('@')[0]); // Use part of email as name for demo
+    router.push('/dashboard');
+  }
+
+  return (
+    <Card className="shadow-xl border-primary/20">
+      <CardHeader className="text-center">
+        <CardTitle className="text-3xl font-bold text-primary">Welcome Back!</CardTitle>
+        <CardDescription>Sign in to continue to AdNeon</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground/80">Email</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
+                      <Input placeholder="you@example.com" {...field} className="pl-10" />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground/80">Password</FormLabel>
+                  <FormControl>
+                     <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
+                      <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button 
+              type="submit" 
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
+            >
+              <LogIn className="mr-2 h-5 w-5" /> Login
+            </Button>
+          </form>
+        </Form>
+        <div className="mt-6 text-center text-sm">
+          <p className="text-foreground/70">
+            Don&apos;t have an account?{' '}
+            <Link href="/signup" className="font-medium text-accent hover:text-accent/80 underline">
+              Sign up
+            </Link>
+          </p>
+          <p className="mt-2 text-foreground/70">
+            <Link href="/forgot-password" className="font-medium text-accent hover:text-accent/80 underline">
+              Forgot password?
+            </Link>
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
