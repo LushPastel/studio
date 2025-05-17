@@ -175,7 +175,7 @@ export function SignupForm() {
                   <FormControl>
                      <div className="relative">
                       <Gift className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-                      <Input placeholder="ADPLAYXYZ" {...field} className="pl-10" />
+                      <Input placeholder="Referral Code" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,18 +17,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/context/auth-context';
 import { CheckCircle, UserPlus } from "lucide-react";
-import { useState } from 'react'; // Added import
+import { useState } from 'react'; 
 
 const formSchema = z.object({
   referralCode: z.string().min(6, { message: 'Referral code must be at least 6 characters.' }),
 });
 
 export function ApplyReferralCard() {
-  const { applyReferral } = useAuth();
-  // This state would ideally come from user data (e.g., hasAppliedReferral: boolean)
-  // For demo, we'll just allow applying multiple times, or disable after one successful apply in this session.
+  const { applyReferral, user } = useAuth(); // Get user to check hasAppliedReferral
+  // Determine if the user has already applied a referral from their user data
+  const hasAlreadyAppliedReferral = user?.hasAppliedReferral;
   const [appliedThisSession, setAppliedThisSession] = useState(false);
-
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,14 +37,19 @@ export function ApplyReferralCard() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (hasAlreadyAppliedReferral) {
+      // This case should ideally be prevented by disabling the form or showing a message
+      // if hasAlreadyAppliedReferral is true, but this is an extra check.
+      return;
+    }
     const success = applyReferral(values.referralCode);
     if (success) {
       form.reset();
-      setAppliedThisSession(true); // Prevent re-applying in same session for demo
+      setAppliedThisSession(true); 
     }
   }
 
-  if (appliedThisSession) {
+  if (hasAlreadyAppliedReferral || appliedThisSession) {
     return (
        <Card className="shadow-lg border-green-500/50">
         <CardHeader>
@@ -83,7 +88,7 @@ export function ApplyReferralCard() {
                 <FormItem>
                   <FormLabel className="text-foreground/80">Enter Code</FormLabel>
                   <FormControl>
-                    <Input placeholder="ADNEONXYZ" {...field} className="border-accent/50" />
+                    <Input placeholder="Referral Code" {...field} className="border-accent/50" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
