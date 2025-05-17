@@ -80,7 +80,7 @@ export default function HomePage() {
       {/* Top tasks Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Top tasks</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <OfferCard 
             title="Offer.PRO" 
             subtitle="OfferPro" 
@@ -111,7 +111,7 @@ export default function HomePage() {
       {/* Trending Tasks Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Trending Tasks</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <OfferCard 
             title="Pubscale" 
             customIconElement={<TrendingUp className="h-8 w-8"/>} 
@@ -139,7 +139,7 @@ export default function HomePage() {
       {/* Trending Survey Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Trending Survey</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <OfferCard 
             title="CPX" 
             subtitle="CPX Research"
@@ -168,17 +168,16 @@ export default function HomePage() {
       {/* Bonus Offers Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Bonus Offers</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4">
            <OfferCard 
             title="Special Bonus" 
             icon={Gift}
             className="bg-pink-500 text-white"
             onClickAction={() => console.log('Bonus clicked')}
           />
-          <p className="text-muted-foreground col-span-2 sm:col-span-2 pt-4">More bonus offers coming soon!</p>
+          <p className="text-muted-foreground col-span-2 pt-4">More bonus offers coming soon!</p>
         </div>
       </section>
     </div>
   );
 }
-
