@@ -21,7 +21,6 @@ interface ProfileListItemProps {
 }
 
 const ProfileListItem: React.FC<ProfileListItemProps> = ({ icon: Icon, text, onClick, href, status, isDestructive }) => {
-  const router = useRouter(); // Not used here, but kept for potential future use if ProfileListItem becomes more complex
   const commonClasses = "flex items-center space-x-4 p-4 w-full text-left";
   const interactiveClasses = "hover:bg-muted/50 transition-colors rounded-md";
 
@@ -70,12 +69,14 @@ export default function ProfilePage() {
     }
   }, [isLoadingAuth, isAuthenticated, router, isLoggingOut]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoggingOut(true);
-    logout();
-    // The useEffect above will handle the redirect after logout state is updated in AuthContext
-    // Forcing an immediate redirect might conflict with context updates.
-    // router.push('/login'); // Can be deferred to AuthContext's state change effect
+    await logout(); // Assuming logout might be async or have side effects handled by AuthProvider
+    // The useEffect above will handle the redirect after logout state is updated in AuthContext.
+    // If logout itself handles redirect, this router.push might be redundant or even 
+    // conflict if AuthContext also tries to redirect.
+    // Forcing an immediate redirect:
+    // router.push('/login'); 
   };
 
   const handleCopyReferralCode = () => {
@@ -123,7 +124,7 @@ export default function ProfilePage() {
       <Separator className="my-4" />
 
       <div className="space-y-1">
-        <ProfileListItem icon={UserCog} text="Edit Profile" onClick={() => toast({ title: "Coming Soon", description: "Profile editing will be available soon."})} />
+        <ProfileListItem icon={UserCog} text="Edit Profile" href="/profile/edit" />
         <Separator />
         <ProfileListItem icon={KeyRound} text="Change Password" onClick={() => toast({ title: "Coming Soon", description: "Password change functionality will be available soon."})} />
         <Separator />

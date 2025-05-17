@@ -19,6 +19,11 @@ interface User {
   balance: number;
   referralCode: string;
   hasAppliedReferral?: boolean;
+  // New fields for profile
+  gender?: 'Not Specified' | 'Male' | 'Female' | 'Other';
+  ageRange?: 'Prefer not to say' | '18-24' | '25-34' | '35-44' | '45-54' | '55+';
+  contactMethod?: 'WhatsApp' | 'Instagram' | 'Telegram';
+  contactDetail?: string;
 }
 
 export interface WithdrawalRequest {
@@ -32,7 +37,7 @@ export interface WithdrawalRequest {
 interface AuthContextType {
   user: User | null; // User object without password
   isAuthenticated: boolean;
-  isLoadingAuth: boolean; // New flag for auth loading state
+  isLoadingAuth: boolean;
   signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
@@ -40,6 +45,7 @@ interface AuthContextType {
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
+  updateUser: (updatedDetails: Partial<Pick<User, 'name' | 'gender' | 'ageRange' | 'contactMethod' | 'contactDetail'>>) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,13 +78,13 @@ const saveAllUsers = (users: User[]) => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Initialize as true
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window === 'undefined') {
-      setIsLoadingAuth(false); // No window, so auth check is "done" (as non-operational)
+      setIsLoadingAuth(false);
       return;
     }
     try {
@@ -100,12 +106,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Error during auth initialization from localStorage:", error);
-      // Potentially clear auth state if localStorage is compromised or inaccessible
       localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
       setUser(null);
       setIsAuthenticated(false);
     }
-    setIsLoadingAuth(false); // Auth check is complete
+    setIsLoadingAuth(false);
   }, []);
 
   const signup = async (name: string, email: string, passwordInput: string, referralCodeInput?: string): Promise<boolean> => {
@@ -123,6 +128,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       balance: 0,
       referralCode: generateReferralCode(),
       hasAppliedReferral: false,
+      // Initialize new profile fields
+      gender: 'Not Specified',
+      ageRange: 'Prefer not to say',
+      contactMethod: 'WhatsApp',
+      contactDetail: '',
     };
 
     let finalNewUser = { ...newUserBase };
@@ -199,20 +209,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
-  const updateUserInStorage = (userToUpdate: Omit<User, 'password'> & { password?: string }) => {
+  const updateUserInStorage = (userToUpdate: User) => { // Expect full User object for internal consistency
     const users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userToUpdate.id);
     if (userIndex !== -1) {
-      const existingUser = users[userIndex];
-      users[userIndex] = { 
-        ...existingUser, 
-        ...userToUpdate, 
-        password: userToUpdate.password || existingUser.password 
-      };
+      users[userIndex] = { ...users[userIndex], ...userToUpdate }; // Merge, preserving stored password
       saveAllUsers(users);
     }
   };
-
+  
   const addBalance = (amount: number) => {
     if (!user) return;
     const newBalance = parseFloat((user.balance + amount).toFixed(2));
@@ -275,36 +280,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    const applicantIndex = allUsers.findIndex(u => u.id === user.id);
-    if (applicantIndex === -1) { 
-        toast({ variant: "destructive", title: "Error", description: "Critical: Could not find current user to apply bonus." });
-        return false;
-    }
+    // Update applicant (current user)
     const applicantWithBonus = {
-        ...allUsers[applicantIndex],
-        balance: parseFloat((allUsers[applicantIndex].balance + REFERRAL_BONUS).toFixed(2)),
+        ...user,
+        balance: parseFloat((user.balance + REFERRAL_BONUS).toFixed(2)),
         hasAppliedReferral: true
     };
-    allUsers[applicantIndex] = applicantWithBonus;
+    setUser(applicantWithBonus); // Update context state
+    updateUserInStorage(applicantWithBonus); // Update applicant in localStorage
 
+    // Update referrer
     const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
-    const updatedReferrer = {
-        ...allUsers[referrerIndex],
-        balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2))
-    };
-    allUsers[referrerIndex] = updatedReferrer;
-
-    saveAllUsers(allUsers);
-
-    const { password: PwFromApplicant, ...applicantToSetInState } = applicantWithBonus; 
-    setUser(applicantToSetInState as User); 
+    if (referrerIndex !== -1) {
+        const updatedReferrer = {
+            ...allUsers[referrerIndex],
+            balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2))
+        };
+        // To save this, we need to update the `allUsers` array and save it.
+        // The `updateUserInStorage` is for the current user. Let's refine this part.
+        const usersCopy = [...allUsers];
+        usersCopy[referrerIndex] = updatedReferrer;
+        // Also update the applicant in this copied array before saving
+        const applicantIdxInAllUsers = usersCopy.findIndex(u => u.id === applicantWithBonus.id);
+        if (applicantIdxInAllUsers !== -1) {
+            usersCopy[applicantIdxInAllUsers] = applicantWithBonus;
+        }
+        saveAllUsers(usersCopy);
+    }
     
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
     return true;
   };
 
+  const updateUser = (updatedDetails: Partial<Pick<User, 'name' | 'gender' | 'ageRange' | 'contactMethod' | 'contactDetail'>>): boolean => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
+      return false;
+    }
+
+    const newProfileData = { ...user, ...updatedDetails };
+    setUser(newProfileData);
+    updateUserInStorage(newProfileData); // This now takes the full User object
+    
+    toast({ title: "Profile Updated", description: "Your profile details have been successfully updated." });
+    return true;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, requestWithdrawal, withdrawalHistory, applyReferral }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, requestWithdrawal, withdrawalHistory, applyReferral, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -317,4 +340,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
