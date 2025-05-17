@@ -4,7 +4,7 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { Hourglass, Gamepad2, TrendingUp, FileText, BarChartBig, Gift, Star } from 'lucide-react'; // Added Star icon
+import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react'; 
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
 import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; 
@@ -18,6 +18,15 @@ const TimeWallIcon = () => <span className="font-black text-2xl leading-none">ti
 const CPXIcon = () => <span className="font-black text-4xl">CPX</span>;
 const NNIcon = () => <span className="font-black text-4xl">NN</span>;
 
+const FiveStars = () => (
+  <div className="flex space-x-0.5">
+    <Star className="h-5 w-5 fill-current text-current" />
+    <Star className="h-5 w-5 fill-current text-current" />
+    <Star className="h-5 w-5 fill-current text-current" />
+    <Star className="h-5 w-5 fill-current text-current" />
+    <Star className="h-5 w-5 fill-current text-current" />
+  </div>
+);
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoadingAuth, addCoins, updateUser } = useAuth();
@@ -67,7 +76,7 @@ export default function HomePage() {
 
       <Separator />
 
-      {/* Dash & Cash Section (Kept for navigation) */}
+      {/* Dash & Cash Section */}
       <section className="space-y-4">
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
@@ -190,8 +199,8 @@ export default function HomePage() {
           />
           <OfferCard
             title="Rate Us"
-            subtitle={user?.hasRatedApp ? "Bonus Claimed!" : "Get 20 coins"}
-            icon={Star}
+            subtitle={user?.hasRatedApp ? "Bonus Claimed! Thanks for your support." : "Enjoying AdPlay? Rate us 5 Stars & get 20 coins!"}
+            customIconElement={<FiveStars />}
             className="bg-yellow-500 text-white"
             onClickAction={handleRateUs}
             showStartButton={!user?.hasRatedApp}
@@ -201,5 +210,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

@@ -55,7 +55,7 @@ export function OfferCard({
       className={cn(
         "shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col group overflow-hidden rounded-2xl h-full text-foreground",
         className,
-        href ? '' : 'cursor-pointer' // Only add cursor-pointer if no href (handled by Link) and onClick is present
+        href || onClickAction ? 'cursor-pointer' : '' 
       )}
       onClick={!href ? handleClick : undefined} // Click handled by Link if href exists
     >
@@ -71,8 +71,11 @@ export function OfferCard({
       ) : (
         <>
           <CardContent className="flex flex-col items-center justify-center p-4 pt-6 flex-grow space-y-1 text-center">
-            {IconComponent && <IconComponent className="h-10 w-10 mb-1" />}
-            {customIconElement && <div className="mb-1 text-2xl font-bold flex items-center justify-center h-10 w-10">{customIconElement}</div>}
+            {customIconElement ? (
+              <div className="mb-2 flex items-center justify-center">{customIconElement}</div>
+            ) : IconComponent ? (
+              <IconComponent className="h-10 w-10 mb-1" />
+            ) : null}
             <h4 className="text-base font-bold leading-tight">{title}</h4>
             {subtitle && <p className="text-xs opacity-80 leading-tight">{subtitle}</p>}
           </CardContent>
