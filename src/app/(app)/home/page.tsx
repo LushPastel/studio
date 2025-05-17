@@ -48,11 +48,11 @@ export default function HomePage() {
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <QuickActionCard 
-            title="Daily Log"
+            title="Dashboard" // Changed from "Daily Log"
             description="View your streak calendar"
             href="/dashboard" 
             className="bg-gradient-to-br from-primary/70 to-primary/40 text-primary-foreground hover:from-primary/80 hover:to-primary/50"
-            iconType="dashboard" // Re-using dashboard icon, could be calendar icon if available/desired
+            iconType="dashboard" 
           />
           <QuickActionCard 
             title="Wallet"
@@ -93,3 +93,4 @@ export default function HomePage() {
     </div>
   );
 }
+

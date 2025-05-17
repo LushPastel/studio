@@ -33,7 +33,7 @@ export default function DashboardPage() {
        <section className="space-y-4">
         <Card className="shadow-lg border-border overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">Daily Log</CardTitle>
+            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</CardTitle> 
             <CardDescription className="text-muted-foreground text-lg">Your Streak Calendar</CardDescription>
           </CardHeader>
           <CardContent className="p-2 sm:p-4">
@@ -58,3 +58,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
