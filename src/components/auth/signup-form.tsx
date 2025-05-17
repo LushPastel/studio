@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -18,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { UserPlus, Mail, KeyRound, Gift, User as UserIcon } from 'lucide-react';
+import React from 'react'; // Import React for useState
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -31,8 +33,9 @@ const formSchema = z.object({
 });
 
 export function SignupForm() {
-  const { login, applyReferral } = useAuth(); // Using login for signup simulation
+  const { signup, applyReferral } = useAuth();
   const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,20 +48,29 @@ export function SignupForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate signup
-    login(values.email, values.name);
-    if (values.referralCode) {
-      applyReferral(values.referralCode);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    const signupSuccess = await signup(values.name, values.email, values.password);
+    
+    if (signupSuccess) {
+      if (values.referralCode) {
+        // applyReferral now uses the user from AuthContext, which should be set after successful signup
+        applyReferral(values.referralCode); 
+      }
+      router.push('/dashboard');
+    } else {
+      // Error message is handled by toast in AuthContext, could clear fields here if desired
+      form.resetField("password");
+      form.resetField("confirmPassword");
     }
-    router.push('/dashboard');
+    setIsLoading(false);
   }
 
   return (
     <Card className="shadow-xl border-primary/20">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold text-primary">Create Account</CardTitle>
-        <CardDescription>Join AdNeon and start earning!</CardDescription>
+        <CardDescription>Join AdPlay and start earning!</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -136,7 +148,7 @@ export function SignupForm() {
                   <FormControl>
                      <div className="relative">
                       <Gift className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-                      <Input placeholder="ADNEONXYZ" {...field} className="pl-10" />
+                      <Input placeholder="ADPLAYXYZ" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -146,8 +158,10 @@ export function SignupForm() {
             <Button 
               type="submit" 
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
+              disabled={isLoading}
             >
-             <UserPlus className="mr-2 h-5 w-5" /> Sign Up
+              {isLoading ? <UserPlus className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
+              {isLoading ? 'Signing up...' : 'Sign Up'}
             </Button>
           </form>
         </Form>

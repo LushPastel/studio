@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -22,12 +23,13 @@ import { APP_NAME } from '@/lib/constants';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  password: z.string().min(1, { message: 'Password is required.' }), // Min 1 for prototype, adjust as needed
 });
 
 export function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,10 +39,16 @@ export function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Simulate login
-    login(values.email, values.email.split('@')[0]); // Use part of email as name for demo
-    router.push('/dashboard');
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    const success = await login(values.email, values.password);
+    setIsLoading(false);
+    if (success) {
+      router.push('/dashboard');
+    } else {
+      form.setError("password", { type: "manual", message: "Login failed. Check credentials." });
+      form.resetField("password");
+    }
   }
 
   return (
@@ -87,8 +95,10 @@ export function LoginForm() {
             <Button 
               type="submit" 
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
+              disabled={isLoading}
             >
-              <LogIn className="mr-2 h-5 w-5" /> Login
+              {isLoading ? <LogIn className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </Form>
