@@ -7,9 +7,8 @@ import React, { useEffect } from 'react';
 import { Hourglass, Gamepad2, TrendingUp, FileText, BarChartBig, Gift } from 'lucide-react'; // Added new icons
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
-import { SuperOfferPromoCard } from '@/components/home/SuperOfferPromoCard';
-import { PlayQuizPromoCard } from '@/components/home/PlayQuizPromoCard';
-import { QuickActionCard } from '@/components/dashboard/QuickActionCard'; // Keep for Dash & Cash
+import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; // Updated import
+import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
 
 // Custom text-based icons for specific offer cards
 const OfferProIcon = () => <span className="font-black text-2xl leading-none">Offer<br/>.<br/>PRO</span>;
@@ -48,10 +47,9 @@ export default function HomePage() {
         </h1>
       </div>
 
-      {/* Super Offers / Play Quiz Section */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SuperOfferPromoCard />
-        <PlayQuizPromoCard />
+      {/* Shop Promo Card Section */}
+      <section>
+        <ShopPromoCard />
       </section>
 
       <Separator />
@@ -183,3 +181,4 @@ export default function HomePage() {
     </div>
   );
 }
+
