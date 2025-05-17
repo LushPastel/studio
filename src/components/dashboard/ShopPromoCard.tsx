@@ -32,10 +32,13 @@ export function ShopPromoCard() {
       <CardContent className="p-4 bg-card">
         <Link href="/shop" passHref>
           <Button
-            variant="default" // Explicitly set to default
-            className="w-full" 
+            variant="default" 
+            className="w-full flex items-center justify-center" 
           >
-            Explore Shop <ArrowRight className="ml-2 h-5 w-5" />
+            <span className="font-semibold">SHOP</span>
+            <span className="ml-2 bg-white rounded-full p-1 flex items-center justify-center">
+              <ArrowRight className="h-4 w-4 text-black" />
+            </span>
           </Button>
         </Link>
       </CardContent>
