@@ -8,7 +8,8 @@ import { Loader2, UserCog, BellRing, Languages, Palette, History, HelpCircle, Fi
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast'; // For copy feedback
+import { useToast } from '@/hooks/use-toast'; 
+import Link from 'next/link';
 
 interface ProfileListItemProps {
   icon: React.ElementType;
@@ -20,7 +21,7 @@ interface ProfileListItemProps {
 }
 
 const ProfileListItem: React.FC<ProfileListItemProps> = ({ icon: Icon, text, onClick, href, status, isDestructive }) => {
-  const router = useRouter();
+  const router = useRouter(); // Not used here, but kept for potential future use if ProfileListItem becomes more complex
   const commonClasses = "flex items-center space-x-4 p-4 w-full text-left";
   const interactiveClasses = "hover:bg-muted/50 transition-colors rounded-md";
 
@@ -56,27 +57,25 @@ const ProfileListItem: React.FC<ProfileListItemProps> = ({ icon: Icon, text, onC
   );
 };
 
-// Need to import Link for ProfileListItem if href is used
-import Link from 'next/link';
-
-
 export default function ProfilePage() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, isLoadingAuth } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (isLoggingOut) return;
-    if (!isAuthenticated && user === null) {
+    if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, user, router, isLoggingOut]);
+  }, [isLoadingAuth, isAuthenticated, router, isLoggingOut]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
     logout();
-    router.push('/login');
+    // The useEffect above will handle the redirect after logout state is updated in AuthContext
+    // Forcing an immediate redirect might conflict with context updates.
+    // router.push('/login'); // Can be deferred to AuthContext's state change effect
   };
 
   const handleCopyReferralCode = () => {
@@ -95,7 +94,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (isLoadingAuth || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -106,7 +105,6 @@ export default function ProfilePage() {
 
   return (
     <div className="pb-8 max-w-2xl mx-auto px-2 sm:px-4">
-      {/* User Info Section */}
       <div className="flex flex-col items-center py-8 space-y-3">
         <Avatar className="h-24 w-24 border-2 border-primary">
           <AvatarImage src={`https://placehold.co/100x100.png?text=${user.name.charAt(0)}`} alt={user.name} data-ai-hint="avatar person" />
@@ -124,7 +122,6 @@ export default function ProfilePage() {
 
       <Separator className="my-4" />
 
-      {/* Settings List Section */}
       <div className="space-y-1">
         <ProfileListItem icon={UserCog} text="Edit Profile" onClick={() => toast({ title: "Coming Soon", description: "Profile editing will be available soon."})} />
         <Separator />
@@ -149,4 +146,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

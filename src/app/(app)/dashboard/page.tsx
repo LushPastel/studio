@@ -1,3 +1,4 @@
+
 "use client";
 
 import { BalanceCard } from '@/components/dashboard/balance-card';
@@ -9,16 +10,16 @@ import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated && user === null) { // Check both to avoid premature redirect during initial load
+    if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isLoadingAuth, isAuthenticated, router]);
 
-  if (!user) {
+  if (isLoadingAuth || !user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -33,7 +34,7 @@ export default function DashboardPage() {
         <h2 className="text-3xl font-bold tracking-tight text-foreground">
           Welcome back, <span className="text-primary">{user.name}!</span>
         </h2>
-        <p className="text-muted-foreground">Here&apos;s an overview of your AdNeon activity.</p>
+        <p className="text-muted-foreground">Here&apos;s an overview of your AdPlay activity.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

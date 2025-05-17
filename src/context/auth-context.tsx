@@ -32,6 +32,7 @@ export interface WithdrawalRequest {
 interface AuthContextType {
   user: User | null; // User object without password
   isAuthenticated: boolean;
+  isLoadingAuth: boolean; // New flag for auth loading state
   signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
@@ -48,41 +49,63 @@ const generateReferralCode = () => `ADPLAY${Math.random().toString(36).substring
 // Helper to get all users from localStorage
 const getAllUsers = (): User[] => {
   if (typeof window === 'undefined') return [];
-  const storedUsers = localStorage.getItem(LS_USERS_KEY);
-  return storedUsers ? JSON.parse(storedUsers) : [];
+  try {
+    const storedUsers = localStorage.getItem(LS_USERS_KEY);
+    return storedUsers ? JSON.parse(storedUsers) : [];
+  } catch (error) {
+    console.error("Error accessing localStorage:", error);
+    return [];
+  }
 };
 
 // Helper to save all users to localStorage
 const saveAllUsers = (users: User[]) => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+  try {
+    localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+  } catch (error) {
+    console.error("Error saving to localStorage:", error);
+  }
 };
 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null); // Stores user data *without* password
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Initialize as true
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const currentUserId = localStorage.getItem(LS_CURRENT_USER_ID_KEY);
-    if (currentUserId) {
-      const users = getAllUsers();
-      const loggedInUser = users.find(u => u.id === currentUserId);
-      if (loggedInUser) {
-        const { password, ...userWithoutPassword } = loggedInUser;
-        setUser(userWithoutPassword as User); // Cast: password field is removed
-        setIsAuthenticated(true);
-        const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
-        if (storedHistory) {
-          setWithdrawalHistory(JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })));
-        }
-      } else {
-        localStorage.removeItem(LS_CURRENT_USER_ID_KEY); // Clean up if user ID is invalid
-      }
+    if (typeof window === 'undefined') {
+      setIsLoadingAuth(false); // No window, so auth check is "done" (as non-operational)
+      return;
     }
+    try {
+      const currentUserId = localStorage.getItem(LS_CURRENT_USER_ID_KEY);
+      if (currentUserId) {
+        const users = getAllUsers();
+        const loggedInUser = users.find(u => u.id === currentUserId);
+        if (loggedInUser) {
+          const { password, ...userWithoutPassword } = loggedInUser;
+          setUser(userWithoutPassword as User);
+          setIsAuthenticated(true);
+          const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
+          if (storedHistory) {
+            setWithdrawalHistory(JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })));
+          }
+        } else {
+          localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
+        }
+      }
+    } catch (error) {
+      console.error("Error during auth initialization from localStorage:", error);
+      // Potentially clear auth state if localStorage is compromised or inaccessible
+      localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+    setIsLoadingAuth(false); // Auth check is complete
   }, []);
 
   const signup = async (name: string, email: string, passwordInput: string, referralCodeInput?: string): Promise<boolean> => {
@@ -92,31 +115,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // IMPORTANT: In a real app, hash the password before storing.
     const newUserBase: User = {
       id: `user-${Date.now()}`,
       email,
       name,
-      password: passwordInput, // Storing plain text for prototype
+      password: passwordInput,
       balance: 0,
       referralCode: generateReferralCode(),
       hasAppliedReferral: false,
     };
 
-    let finalNewUser = { ...newUserBase }; // Work with a mutable copy for referral modifications
+    let finalNewUser = { ...newUserBase };
 
     if (referralCodeInput) {
       const referrer = allUsers.find(u => u.referralCode === referralCodeInput && u.id !== finalNewUser.id);
-
       if (referrer) {
-        // Apply bonus to new user (applicant)
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
         finalNewUser.hasAppliedReferral = true;
-        toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus for signing up with a referral code!` });
+        toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
 
-        // Apply bonus to referrer and update them in the allUsers array
         const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
-        if (referrerIndex !== -1) { // Should always be found if referrer object exists
+        if (referrerIndex !== -1) {
           const updatedReferrer = {
             ...allUsers[referrerIndex],
             balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)),
@@ -124,19 +143,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           allUsers[referrerIndex] = updatedReferrer;
         }
       } else {
-        toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered during signup was invalid. Signup will proceed without this bonus." });
+        toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
     }
     
-    // Add the final (potentially modified by referral) new user to the list and save
-    const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser]; // Filter to avoid duplicates if referrer logic somehow re-added
+    const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser];
     saveAllUsers(updatedUsersArray);
 
     const { password, ...userToSet } = finalNewUser;
     setUser(userToSet as User);
     setIsAuthenticated(true);
-    localStorage.setItem(LS_CURRENT_USER_ID_KEY, finalNewUser.id);
-    setWithdrawalHistory([]); // Reset history for new user
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(LS_CURRENT_USER_ID_KEY, finalNewUser.id);
+    }
+    setWithdrawalHistory([]);
 
     toast({ title: "Signup Successful", description: `Welcome, ${name}!` });
     return true;
@@ -151,7 +171,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // IMPORTANT: In a real app, compare hashed passwords. Here, plain text.
     if (foundUser.password !== passwordInput) {
       toast({ variant: "destructive", title: "Login Failed", description: "Incorrect password." });
       return false;
@@ -160,10 +179,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { password, ...userToSet } = foundUser;
     setUser(userToSet as User);
     setIsAuthenticated(true);
-    localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
-
-    const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${foundUser.id}`);
-    setWithdrawalHistory(storedHistory ? JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })) : []);
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
+        const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${foundUser.id}`);
+        setWithdrawalHistory(storedHistory ? JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })) : []);
+    }
     
     toast({ title: "Login Successful", description: `Welcome back, ${foundUser.name}!` });
     return true;
@@ -179,17 +199,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
-  // Helper to update a user's details in the LS_USERS_KEY storage
-  // This ensures the password from storage is preserved if not explicitly changed
   const updateUserInStorage = (userToUpdate: Omit<User, 'password'> & { password?: string }) => {
     const users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userToUpdate.id);
     if (userIndex !== -1) {
       const existingUser = users[userIndex];
       users[userIndex] = { 
-        ...existingUser, // Start with existing stored user (has password)
-        ...userToUpdate, // Override with new details
-        password: userToUpdate.password || existingUser.password // Preserve old password if new one not provided
+        ...existingUser, 
+        ...userToUpdate, 
+        password: userToUpdate.password || existingUser.password 
       };
       saveAllUsers(users);
     }
@@ -240,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const applyReferral = (code: string): boolean => {
-    if (!user) { // Current user trying to apply the code
+    if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply a referral code." });
       return false;
     }
@@ -257,7 +275,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // Update applicant (current user) in the allUsers array
     const applicantIndex = allUsers.findIndex(u => u.id === user.id);
     if (applicantIndex === -1) { 
         toast({ variant: "destructive", title: "Error", description: "Critical: Could not find current user to apply bonus." });
@@ -270,19 +287,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     allUsers[applicantIndex] = applicantWithBonus;
 
-    // Update referrer in the allUsers array
     const referrerIndex = allUsers.findIndex(u => u.id === referrer.id);
-    // No need to check referrerIndex again, already found referrer object
     const updatedReferrer = {
         ...allUsers[referrerIndex],
         balance: parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2))
     };
     allUsers[referrerIndex] = updatedReferrer;
 
-    saveAllUsers(allUsers); // Save all changes to localStorage
+    saveAllUsers(allUsers);
 
-    // Update React state for the current user (applicant)
-    // Destructure password before setting to React state
     const { password: PwFromApplicant, ...applicantToSetInState } = applicantWithBonus; 
     setUser(applicantToSetInState as User); 
     
@@ -291,7 +304,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, signup, login, logout, addBalance, requestWithdrawal, withdrawalHistory, applyReferral }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoadingAuth, signup, login, logout, addBalance, requestWithdrawal, withdrawalHistory, applyReferral }}>
       {children}
     </AuthContext.Provider>
   );

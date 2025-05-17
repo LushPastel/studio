@@ -1,3 +1,4 @@
+
 "use client";
 
 import { ReferralCodeCard } from '@/components/referrals/referral-code-card';
@@ -9,16 +10,16 @@ import { Loader2 } from 'lucide-react';
 import { REFERRAL_BONUS } from '@/lib/constants';
 
 export default function ReferralsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated && user === null) {
+    if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isLoadingAuth, isAuthenticated, router]);
 
-  if (!user) {
+  if (isLoadingAuth || !user) {
      return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -33,7 +34,7 @@ export default function ReferralsPage() {
           Refer & Earn
         </h2>
         <p className="text-muted-foreground">
-          Invite your friends to AdNeon. When they sign up using your code, you both get a bonus of ₹{REFERRAL_BONUS.toFixed(2)}!
+          Invite your friends to AdPlay. When they sign up using your code, you both get a bonus of ₹{REFERRAL_BONUS.toFixed(2)}!
         </p>
       </div>
 

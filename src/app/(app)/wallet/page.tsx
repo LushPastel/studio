@@ -1,24 +1,25 @@
+
 "use client";
 
 import { WithdrawalForm } from '@/components/wallet/withdrawal-form';
 import { WithdrawalHistory } from '@/components/wallet/withdrawal-history';
-import { BalanceCard } from '@/components/dashboard/balance-card'; // Re-use balance card for context
+import { BalanceCard } from '@/components/dashboard/balance-card'; 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function WalletPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated && user === null) {
+    if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isLoadingAuth, isAuthenticated, router]);
 
-  if (!user) {
+  if (isLoadingAuth || !user) {
      return (
       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
