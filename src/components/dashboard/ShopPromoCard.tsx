@@ -32,7 +32,8 @@ export function ShopPromoCard() {
       <CardContent className="p-4 bg-card">
         <Link href="/shop" passHref>
           <Button
-            className="w-full" // Uses default variant: bg-primary, text-primary-foreground
+            variant="default" // Explicitly set to default
+            className="w-full" 
           >
             Explore Shop <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
