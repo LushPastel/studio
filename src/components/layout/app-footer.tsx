@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wallet, Users, Home } from 'lucide-react';
+import { LayoutDashboard, Wallet, Users, User } from 'lucide-react'; // Added User icon
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/referrals', label: 'Referrals', icon: Users },
+  { href: '/profile', label: 'Profile', icon: User }, // Added Profile item
 ];
 
 export function AppFooter() {
@@ -25,7 +26,7 @@ export function AppFooter() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors w-1/3 md:w-auto md:flex-row md:gap-2 hover:bg-accent/50",
+                "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors w-1/4 md:w-auto md:flex-row md:gap-2 hover:bg-accent/50", // Adjusted width for 4 items
                 isActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
               )}
               aria-current={isActive ? "page" : undefined}
