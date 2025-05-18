@@ -7,9 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 import { AD_REWARD, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME } from '@/lib/constants';
 
 // Constants for localStorage keys
-const LS_USERS_KEY = 'adplay-users'; // Keeping this key for simplicity to avoid data loss for existing users
-const LS_CURRENT_USER_ID_KEY = 'adplay-current-user-id'; // Keeping this key
-const LS_WITHDRAWAL_HISTORY_PREFIX = 'adplay-withdrawal-'; // Keeping this key
+const LS_USERS_KEY = 'cashquery-users';
+const LS_CURRENT_USER_ID_KEY = 'cashquery-current-user-id';
+const LS_WITHDRAWAL_HISTORY_PREFIX = 'cashquery-withdrawal-';
 
 interface NotificationPreferences {
   offers: boolean;
@@ -63,6 +63,7 @@ interface AuthContextType {
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
   getAllUsersForLeaderboard: () => User[];
   processWeeklyLeaderboardReset: () => void;
+  googleSignIn: () => void; // Placeholder for Google Sign-In
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,12 +112,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({
+          setUser({ // Ensure all fields have defaults
             coins: 0,
             hasRatedApp: false,
             referralsMade: 0,
             weeklyReferralsMade: 0,
-            ...userWithoutPassword
+            gender: 'Not Specified',
+            ageRange: 'Prefer not to say',
+            contactMethod: 'WhatsApp',
+            contactDetail: '',
+            notificationPreferences: {
+              offers: true,
+              promo: true,
+              payments: true,
+              updates: true,
+            },
+            ...userWithoutPassword // Spread the loaded user data last to override defaults
           } as User);
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
@@ -214,13 +225,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-    setUser({
+     setUser({ // Ensure all fields have defaults
         coins: 0,
         hasRatedApp: false,
         referralsMade: 0,
         weeklyReferralsMade: 0,
-        ...userToSet
-    } as User);
+        gender: 'Not Specified',
+        ageRange: 'Prefer not to say',
+        contactMethod: 'WhatsApp',
+        contactDetail: '',
+        notificationPreferences: {
+          offers: true,
+          promo: true,
+          payments: true,
+          updates: true,
+        },
+        ...userToSet // Spread the loaded user data last to override defaults
+      } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, foundUser.id);
@@ -405,35 +426,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const processWeeklyLeaderboardReset = () => {
-    let allUsers = getAllUsers();
-    if (allUsers.length === 0) {
-        toast({ title: "Leaderboard", description: "No users to process." });
-        return;
-    }
+    // This function no longer awards coins or resets weekly referrals.
+    // It can be a placeholder for other weekly tasks or simply log an action.
+    console.log("Processing weekly leaderboard (no rewards/reset for referrals as per new logic).");
+    toast({ title: "Weekly Process Triggered", description: "Leaderboard criteria is now based on total coins. No weekly referral rewards are active." });
+  };
 
-    allUsers.sort((a, b) => (b.weeklyReferralsMade || 0) - (a.weeklyReferralsMade || 0));
-
-    const rewards = [100, 70, 50];
-
-    for (let i = 0; i < Math.min(allUsers.length, 3); i++) {
-        if ((allUsers[i].weeklyReferralsMade || 0) > 0) {
-            allUsers[i].coins = (allUsers[i].coins || 0) + rewards[i];
-        }
-    }
-
-    allUsers = allUsers.map(u => ({ ...u, weeklyReferralsMade: 0 }));
-
-    saveAllUsers(allUsers);
-
-    if (user) {
-        const updatedCurrentUser = allUsers.find(u => u.id === user.id);
-        if (updatedCurrentUser) {
-            const { password, ...userToSet } = updatedCurrentUser;
-            setUser(userToSet as User);
-        }
-    }
-
-    toast({ title: "Leaderboard Processed!", description: "Weekly winners awarded and leaderboard reset for the new week!" });
+  const googleSignIn = () => {
+    // Placeholder for Google Sign-In
+    toast({ title: "Coming Soon", description: "Google Sign-In will be available in a future update." });
   };
 
 
@@ -453,7 +454,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         applyReferral,
         updateUser,
         getAllUsersForLeaderboard,
-        processWeeklyLeaderboardReset
+        processWeeklyLeaderboardReset,
+        googleSignIn
     }}>
       {children}
     </AuthContext.Provider>
@@ -467,3 +469,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
