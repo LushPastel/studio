@@ -83,4 +83,3 @@ export function LeaderboardTable() {
     </ScrollArea>
   );
 }
-
