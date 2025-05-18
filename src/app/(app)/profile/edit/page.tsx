@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,14 +14,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, Mail, Hourglass, User, ImageUp, Trash2 } from 'lucide-react';
+import { ChevronLeft, Mail, Hourglass, User, ImageUp, Trash2, Crop } from 'lucide-react';
 import Link from 'next/link';
+import Cropper, { type Area } from 'react-easy-crop';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  photoURL: z.string().optional().or(z.literal('')), // Will store Data URI
-  email: z.string().email(), // Will be read-only
+  photoURL: z.string().optional().or(z.literal('')),
+  email: z.string().email(),
   gender: z.enum(["Not Specified", "Male", "Female", "Other"]),
   ageRange: z.enum(["Prefer not to say", "18-24", "25-34", "35-44", "45-54", "55+"]),
   contactMethod: z.enum(["WhatsApp", "Instagram", "Telegram"]),
@@ -30,14 +33,64 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+// Utility function to create an Image object from a source URL
+const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous'); // Needed for tainted canvas
+    image.src = url;
+  });
+
+// Utility function to get a cropped image as a Data URI
+async function getCroppedImg(
+  imageSrc: string,
+  pixelCrop: Area
+): Promise<string | null> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    return null;
+  }
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return canvas.toDataURL('image/jpeg'); // Or image/png for transparency
+}
+
+
 export default function EditProfilePage() {
   const { user, isAuthenticated, isLoadingAuth, updateUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentContactMethod, setCurrentContactMethod] = useState<'WhatsApp' | 'Instagram' | 'Telegram'>('WhatsApp');
+  
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cropper state
+  const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [showCropperDialog, setShowCropperDialog] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -72,7 +125,11 @@ export default function EditProfilePage() {
     }
   }, [isLoadingAuth, isAuthenticated, user, router, form]);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixelsVal: Area) => {
+    setCroppedAreaPixels(croppedAreaPixelsVal);
+  }, []);
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
@@ -85,19 +142,40 @@ export default function EditProfilePage() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        const dataUri = reader.result as string;
-        setImagePreview(dataUri);
-        form.setValue('photoURL', dataUri, { shouldValidate: true });
+        setOriginalImageSrc(reader.result as string);
+        setShowCropperDialog(true);
+        setZoom(1); // Reset zoom when new image is selected
+        setCrop({ x: 0, y: 0 }); // Reset crop
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleApplyCrop = async () => {
+    if (!originalImageSrc || !croppedAreaPixels) {
+      return;
+    }
+    try {
+      const croppedImage = await getCroppedImg(originalImageSrc, croppedAreaPixels);
+      if (croppedImage) {
+        setImagePreview(croppedImage);
+        form.setValue('photoURL', croppedImage, { shouldValidate: true });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Cropping Failed", description: "Could not process the image. Please try another one." });
+    }
+    setShowCropperDialog(false);
+    setOriginalImageSrc(null); // Clear original image after cropping
+  };
+
+
   const handleRemoveImage = () => {
     setImagePreview(null);
+    setOriginalImageSrc(null);
     form.setValue('photoURL', '', { shouldValidate: true });
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Reset file input
+      fileInputRef.current.value = '';
     }
   };
 
@@ -105,7 +183,7 @@ export default function EditProfilePage() {
     setIsSubmitting(true);
     const success = updateUser({
       name: data.name,
-      photoURL: data.photoURL, // This will be the Data URI or empty string
+      photoURL: data.photoURL,
       gender: data.gender,
       ageRange: data.ageRange,
       contactMethod: currentContactMethod,
@@ -153,7 +231,7 @@ export default function EditProfilePage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="h-24 w-24 border-2 border-primary">
-                <AvatarImage src={imagePreview || undefined} alt={user.name} data-ai-hint="profile avatar" className="object-cover"/>
+                <AvatarImage src={imagePreview || undefined} alt={user.name || "User"} data-ai-hint="profile avatar" className="object-cover"/>
                 <AvatarFallback className="text-4xl bg-muted">
                   <User className="h-12 w-12 text-muted-foreground" />
                 </AvatarFallback>
@@ -167,7 +245,7 @@ export default function EditProfilePage() {
                   type="file"
                   ref={fileInputRef}
                   accept="image/*"
-                  onChange={handleImageChange}
+                  onChange={handleImageFileChange}
                   className="hidden"
                   id="photoUpload"
                 />
@@ -180,7 +258,7 @@ export default function EditProfilePage() {
                {form.formState.errors.photoURL && <p className="text-sm text-destructive mt-1">{form.formState.errors.photoURL.message}</p>}
             </div>
 
-
+            {/* Other form fields remain the same */}
             <div>
               <Label htmlFor="name" className="text-foreground/80">Full Name</Label>
               <Input id="name" {...form.register("name")} className="mt-1 border-input focus:border-primary focus:ring-primary" />
@@ -281,6 +359,7 @@ export default function EditProfilePage() {
               {form.formState.errors.contactDetail && <p className="text-sm text-destructive mt-1">{form.formState.errors.contactDetail.message}</p>}
             </div>
 
+
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
@@ -292,6 +371,59 @@ export default function EditProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {showCropperDialog && originalImageSrc && (
+        <Dialog open={showCropperDialog} onOpenChange={(open) => {
+          if (!open) { // If dialog is closed (e.g. by clicking outside or X)
+            setShowCropperDialog(false);
+            setOriginalImageSrc(null); // Clear the original image src if crop is cancelled
+          } else {
+            setShowCropperDialog(true);
+          }
+        }}>
+          <DialogContent className="sm:max-w-[425px] md:max-w-[600px] p-0">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle className="text-primary">Crop Your Photo</DialogTitle>
+            </DialogHeader>
+            <div className="relative h-[300px] md:h-[400px] w-full bg-muted">
+              <Cropper
+                image={originalImageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1 / 1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="zoom-slider" className="text-foreground/80">Zoom</Label>
+                <Slider
+                  id="zoom-slider"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={[zoom]}
+                  onValueChange={(value) => setZoom(value[0])}
+                  className="[&>span:first-child]:h-2 [&>span:first-child>span]:bg-primary [&>button]:bg-background [&>button]:border-primary"
+                />
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => {
+                  setShowCropperDialog(false);
+                  setOriginalImageSrc(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleApplyCrop}>
+                  <Crop className="mr-2 h-4 w-4" /> Apply Crop
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
