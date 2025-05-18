@@ -24,7 +24,7 @@ app.get("/leaderboard", async (req, res) => {
     }));
 
     res.status(200).json({ success: true, leaderboard });
-  } catch (error)
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -38,14 +38,13 @@ app.post("/updateCoins", async (req, res) => {
   }
 
   try {
-    // Ensure the user document exists before attempting to update, or use .set with merge option
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
       // If you want to create the user if they don't exist with these coins:
-      // await userRef.set({ coins }, { merge: true });
-      // Or if you expect the user to always exist:
+      // await userRef.set({ coins: coins }, { merge: true }); 
+      // For this example, we'll assume user must exist to update coins
       return res.status(404).json({ success: false, error: "User not found" });
     }
 

@@ -25,7 +25,8 @@ app.get("/leaderboard", async (req, res) => {
 
     res.status(200).json({ success: true, leaderboard });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Error fetching leaderboard:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch leaderboard." });
   }
 });
 
@@ -34,7 +35,7 @@ app.post("/updateCoins", async (req, res) => {
   const { userId, coins } = req.body;
 
   if (!userId || typeof coins !== "number") {
-    return res.status(400).json({ success: false, error: "Invalid request" });
+    return res.status(400).json({ success: false, error: "Invalid request: userId and coins (number) are required." });
   }
 
   try {
@@ -42,16 +43,14 @@ app.post("/updateCoins", async (req, res) => {
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
-      // If you want to create the user if they don't exist with these coins:
-      // await userRef.set({ coins: coins }, { merge: true }); 
-      // For this example, we'll assume user must exist to update coins
-      return res.status(404).json({ success: false, error: "User not found" });
+      return res.status(404).json({ success: false, error: "User not found." });
     }
 
     await userRef.update({ coins });
-    res.status(200).json({ success: true, message: "Coins updated" });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(200).json({ success: true, message: "Coins updated successfully." });
+  } catch (error)
+    console.error("Error updating coins for user ${userId}:", error);
+    res.status(500).json({ success: false, error: "Failed to update coins." });
   }
 });
 
