@@ -4,12 +4,12 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { AD_REWARD, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS } from '@/lib/constants';
+import { AD_REWARD, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME } from '@/lib/constants';
 
 // Constants for localStorage keys
-const LS_USERS_KEY = 'adplay-users';
-const LS_CURRENT_USER_ID_KEY = 'adplay-current-user-id';
-const LS_WITHDRAWAL_HISTORY_PREFIX = 'adplay-withdrawal-';
+const LS_USERS_KEY = 'adplay-users'; // Keeping this key for simplicity to avoid data loss for existing users
+const LS_CURRENT_USER_ID_KEY = 'adplay-current-user-id'; // Keeping this key
+const LS_WITHDRAWAL_HISTORY_PREFIX = 'adplay-withdrawal-'; // Keeping this key
 
 interface NotificationPreferences {
   offers: boolean;
@@ -26,8 +26,8 @@ interface User {
   balance: number;
   coins: number;
   referralCode: string;
-  referralsMade: number; 
-  weeklyReferralsMade: number; // New field for weekly leaderboard
+  referralsMade: number;
+  weeklyReferralsMade: number;
   hasAppliedReferral?: boolean;
   hasRatedApp?: boolean;
   // Profile fields
@@ -62,12 +62,12 @@ interface AuthContextType {
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
   getAllUsersForLeaderboard: () => User[];
-  processWeeklyLeaderboardReset: () => void; // New function
+  processWeeklyLeaderboardReset: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const generateReferralCode = () => `ADPLAY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+const generateReferralCode = () => `CASHQUERY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
 // Helper to get all users from localStorage
 const getAllUsers = (): User[] => {
@@ -111,12 +111,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({ 
-            coins: 0, 
-            hasRatedApp: false, 
+          setUser({
+            coins: 0,
+            hasRatedApp: false,
             referralsMade: 0,
-            weeklyReferralsMade: 0, 
-            ...userWithoutPassword 
+            weeklyReferralsMade: 0,
+            ...userWithoutPassword
           } as User);
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       coins: 0,
       referralCode: generateReferralCode(),
       referralsMade: 0,
-      weeklyReferralsMade: 0, 
+      weeklyReferralsMade: 0,
       hasAppliedReferral: false,
       hasRatedApp: false,
       gender: 'Not Specified',
@@ -175,7 +175,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
         finalNewUser.hasAppliedReferral = true;
         toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
-        
+
         allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
         allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
         allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
@@ -183,7 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
     }
-    
+
     const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser];
     saveAllUsers(updatedUsersArray);
 
@@ -214,12 +214,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-    setUser({ 
-        coins: 0, 
-        hasRatedApp: false, 
-        referralsMade: 0, 
-        weeklyReferralsMade: 0, 
-        ...userToSet 
+    setUser({
+        coins: 0,
+        hasRatedApp: false,
+        referralsMade: 0,
+        weeklyReferralsMade: 0,
+        ...userToSet
     } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
@@ -227,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${foundUser.id}`);
         setWithdrawalHistory(storedHistory ? JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })) : []);
     }
-    
+
     toast({ title: "Login Successful", description: `Welcome back, ${foundUser.name}!` });
     return true;
   };
@@ -254,13 +254,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       saveAllUsers(users);
     }
   };
-  
+
   const addBalance = (amount: number) => {
     if (!user) return;
     const newBalance = parseFloat((user.balance + amount).toFixed(2));
     const updatedUserForState = { ...user, balance: newBalance };
     setUser(updatedUserForState);
-    
+
     const fullUserFromStorage = getFullUserFromStorage(user.id);
     if (fullUserFromStorage) {
         updateUserInStorage(user.id, { ...fullUserFromStorage, balance: newBalance });
@@ -325,7 +325,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       status: 'pending',
       requestedAt: new Date(),
     };
-    
+
     const updatedHistory = [newRequest, ...withdrawalHistory];
     setWithdrawalHistory(updatedHistory);
     if (typeof window !== 'undefined') {
@@ -335,7 +335,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Withdrawal Requested", description: `₹${amount.toFixed(2)} withdrawal request submitted.` });
     return true;
   };
-  
+
   const applyReferral = (code: string): boolean => {
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply a referral code." });
@@ -365,20 +365,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const fullApplicantUserFromStorage = getFullUserFromStorage(user.id);
     if (fullApplicantUserFromStorage) {
-        updateUserInStorage(user.id, { 
-            ...fullApplicantUserFromStorage, 
-            balance: applicantNewBalance, 
+        updateUserInStorage(user.id, {
+            ...fullApplicantUserFromStorage,
+            balance: applicantNewBalance,
             hasAppliedReferral: true
         });
     }
-    
+
     // Update referrer
     allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
     allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
     allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
 
-    saveAllUsers(allUsers); 
-    
+    saveAllUsers(allUsers);
+
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
     return true;
   };
@@ -396,7 +396,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (fullUserFromStorage) {
          updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
     }
-    
+
     return true;
   };
 
@@ -413,10 +413,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     allUsers.sort((a, b) => (b.weeklyReferralsMade || 0) - (a.weeklyReferralsMade || 0));
 
-    const rewards = [100, 70, 50]; 
+    const rewards = [100, 70, 50];
 
     for (let i = 0; i < Math.min(allUsers.length, 3); i++) {
-        if ((allUsers[i].weeklyReferralsMade || 0) > 0) { 
+        if ((allUsers[i].weeklyReferralsMade || 0) > 0) {
             allUsers[i].coins = (allUsers[i].coins || 0) + rewards[i];
         }
     }
@@ -438,22 +438,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AuthContext.Provider value={{ 
-        user, 
-        isAuthenticated, 
-        isLoadingAuth, 
-        signup, 
-        login, 
-        logout, 
-        addBalance, 
-        addCoins, 
-        spendCoins, 
-        requestWithdrawal, 
-        withdrawalHistory, 
-        applyReferral, 
-        updateUser, 
+    <AuthContext.Provider value={{
+        user,
+        isAuthenticated,
+        isLoadingAuth,
+        signup,
+        login,
+        logout,
+        addBalance,
+        addCoins,
+        spendCoins,
+        requestWithdrawal,
+        withdrawalHistory,
+        applyReferral,
+        updateUser,
         getAllUsersForLeaderboard,
-        processWeeklyLeaderboardReset 
+        processWeeklyLeaderboardReset
     }}>
       {children}
     </AuthContext.Provider>
@@ -467,5 +467,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

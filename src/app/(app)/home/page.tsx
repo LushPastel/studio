@@ -4,12 +4,13 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react'; 
+import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
-import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; 
+import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard';
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
 import { useToast } from '@/hooks/use-toast';
+import { APP_NAME } from '@/lib/constants';
 
 
 // Custom text-based icons for specific offer cards
@@ -57,7 +58,7 @@ export default function HomePage() {
       toast({ title: "Already Rated", description: "You've already claimed this bonus!" });
     }
   };
-  
+
   return (
     <div className="space-y-8">
       <div>
@@ -80,106 +81,106 @@ export default function HomePage() {
       <section className="space-y-4">
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
-          <QuickActionCard 
+          <QuickActionCard
             title="Dashboard"
             description="View your streak calendar"
-            href="/dashboard" 
+            href="/dashboard"
             className="bg-card hover:bg-muted/50"
-            iconType="dashboard" 
+            iconType="dashboard"
           />
-          <QuickActionCard 
+          <QuickActionCard
             title="Wallet"
             description="Manage your earnings"
-            href="/wallet" 
+            href="/wallet"
             className="bg-card hover:bg-muted/50"
             iconType="wallet"
           />
         </div>
       </section>
-      
+
       <Separator />
 
       {/* Top tasks Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Top tasks</h3>
         <div className="grid grid-cols-3 gap-4">
-          <OfferCard 
-            title="Offer.PRO" 
-            subtitle="OfferPro" 
-            customIconElement={<OfferProIcon />} 
-            className="bg-indigo-600 text-white" 
+          <OfferCard
+            title="Offer.PRO"
+            subtitle="OfferPro"
+            customIconElement={<OfferProIcon />}
+            className="bg-indigo-600 text-white"
             onClickAction={() => console.log('Offer.PRO clicked')}
           />
-          <OfferCard 
-            title="Playtime" 
-            icon={Gamepad2} 
-            isRecommended 
-            className="bg-indigo-600 text-white" 
+          <OfferCard
+            title="Playtime"
+            icon={Gamepad2}
+            isRecommended
+            className="bg-indigo-600 text-white"
             showStartButton={false}
             onClickAction={() => console.log('Playtime clicked')}
           />
-          <OfferCard 
-            title="Timewall" 
-            subtitle="Timewall" 
-            customIconElement={<TimeWallIcon />} 
+          <OfferCard
+            title="Timewall"
+            subtitle="Timewall"
+            customIconElement={<TimeWallIcon />}
             className="bg-green-500 text-white"
             onClickAction={() => console.log('Timewall clicked')}
           />
         </div>
       </section>
-      
+
       <Separator />
 
       {/* Trending Tasks Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Trending Tasks</h3>
         <div className="grid grid-cols-3 gap-4">
-          <OfferCard 
-            title="Pubscale" 
-            customIconElement={<TrendingUp className="h-8 w-8"/>} 
+          <OfferCard
+            title="Pubscale"
+            customIconElement={<TrendingUp className="h-8 w-8"/>}
             className="bg-cyan-500 text-white"
             onClickAction={() => console.log('Pubscale clicked')}
           />
-          <OfferCard 
-            title="Timewall" 
-            subtitle="Timewall" 
-            customIconElement={<TimeWallIcon />} 
+          <OfferCard
+            title="Timewall"
+            subtitle="Timewall"
+            customIconElement={<TimeWallIcon />}
             className="bg-green-500 text-white"
             onClickAction={() => console.log('Timewall clicked')}
           />
-          <OfferCard 
-            title="See All" 
-            cardType="seeAll" 
-            className="bg-purple-600 text-white" 
+          <OfferCard
+            title="See All"
+            cardType="seeAll"
+            className="bg-purple-600 text-white"
             href="/all-tasks" // Example link
           />
         </div>
       </section>
-      
+
       <Separator />
 
       {/* Trending Survey Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Trending Survey</h3>
         <div className="grid grid-cols-3 gap-4">
-          <OfferCard 
-            title="CPX" 
+          <OfferCard
+            title="CPX"
             subtitle="CPX Research"
-            customIconElement={<CPXIcon />} 
+            customIconElement={<CPXIcon />}
             className="bg-blue-500 text-white"
             onClickAction={() => console.log('CPX clicked')}
           />
-          <OfferCard 
-            title="Wannads" 
+          <OfferCard
+            title="Wannads"
             subtitle="Wannads Surveys"
-            customIconElement={<NNIcon />} 
+            customIconElement={<NNIcon />}
             className="bg-orange-400 text-white"
             onClickAction={() => console.log('Wannads clicked')}
           />
-          <OfferCard 
-            title="See All" 
-            cardType="seeAll" 
-            className="bg-purple-600 text-white" 
+          <OfferCard
+            title="See All"
+            cardType="seeAll"
+            className="bg-purple-600 text-white"
             href="/all-surveys" // Example link
           />
         </div>
@@ -191,15 +192,15 @@ export default function HomePage() {
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Bonus Offers</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-           <OfferCard 
-            title="Special Bonus" 
+           <OfferCard
+            title="Special Bonus"
             icon={Gift}
             className="bg-pink-500 text-white"
             onClickAction={() => console.log('Bonus clicked')}
           />
           <OfferCard
             title="Rate Us"
-            subtitle={user?.hasRatedApp ? "Bonus Claimed! Thanks for your support." : "Enjoying AdPlay? Rate us 5 Stars & get 20 coins!"}
+            subtitle={user?.hasRatedApp ? "Bonus Claimed! Thanks for your support." : `Enjoying ${APP_NAME}? Rate us 5 Stars & get 20 coins!`}
             customIconElement={<FiveStars />}
             className="bg-yellow-500 text-white"
             onClickAction={handleRateUs}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
+import { APP_NAME } from '@/lib/constants';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'AdNeon - Earn Rewards',
-  description: 'Watch ads, refer friends, and earn rewards with AdNeon.',
+  title: `${APP_NAME} - Earn Rewards`,
+  description: `Watch ads, refer friends, and earn rewards with ${APP_NAME}.`,
 };
 
 export default function RootLayout({

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ArrowRight } from "lucide-react";
-import { REFERRAL_BONUS } from '@/lib/constants';
+import { REFERRAL_BONUS, APP_NAME } from '@/lib/constants';
 
 export function ReferralPromoCard() {
   return (
@@ -15,13 +15,13 @@ export function ReferralPromoCard() {
           <Users className="mr-2 h-6 w-6" /> Refer & Earn
         </CardTitle>
         <CardDescription>
-          Invite friends to AdPlay and you both earn ₹{REFERRAL_BONUS.toFixed(2)}!
+          Invite friends to {APP_NAME} and you both earn ₹{REFERRAL_BONUS.toFixed(2)}!
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Link href="/referrals" passHref>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full border-primary text-primary hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_10px_1px_hsl(var(--primary))] transition-shadow duration-300"
           >
             Go to Referrals <ArrowRight className="ml-2 h-5 w-5" />
