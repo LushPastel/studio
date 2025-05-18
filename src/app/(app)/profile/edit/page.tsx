@@ -153,7 +153,7 @@ export default function EditProfilePage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="h-24 w-24 border-2 border-primary">
-                <AvatarImage src={imagePreview || undefined} alt={user.name} data-ai-hint="profile avatar"/>
+                <AvatarImage src={imagePreview || undefined} alt={user.name} data-ai-hint="profile avatar" className="object-cover"/>
                 <AvatarFallback className="text-4xl bg-muted">
                   <User className="h-12 w-12 text-muted-foreground" />
                 </AvatarFallback>

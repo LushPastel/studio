@@ -71,7 +71,7 @@ export default function ProfilePage() {
     }
   }, [isLoadingAuth, isAuthenticated, router, isLoggingOut]);
 
-  const handleLogout = () => { 
+  const handleLogout = () => {
     setIsLoggingOut(true);
     logout();
     router.push('/login');
@@ -106,9 +106,10 @@ export default function ProfilePage() {
     <div className="pb-8 max-w-2xl mx-auto px-2 sm:px-4">
       <div className="flex flex-col items-center py-8 space-y-3">
         <Avatar className="h-24 w-24 border-2 border-primary">
-          <AvatarImage 
-            src={user.photoURL || `https://placehold.co/100x100.png?text=${user.name.charAt(0)}`} 
-            alt={user.name} 
+          <AvatarImage
+            src={user.photoURL || `https://placehold.co/100x100.png?text=${user.name.charAt(0)}`}
+            alt={user.name}
+            className="object-cover"
             data-ai-hint={user.photoURL ? "profile photo" : "avatar person"}
           />
           <AvatarFallback className="text-4xl">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
@@ -147,5 +148,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
