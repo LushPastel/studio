@@ -21,6 +21,7 @@ export function LeaderboardTable() {
 
   useEffect(() => {
     const users = getAllUsersForLeaderboard();
+    // Map users and ensure 'name' and 'coins' have fallbacks
     const sortedUsers = users
       .map(u => ({
         id: u.id,
@@ -28,9 +29,9 @@ export function LeaderboardTable() {
         coins: Number(u.coins) || 0,    // Ensure coins is a number, default to 0
         photoURL: u.photoURL
       }))
-      .sort((a, b) => b.coins - a.coins);
+      .sort((a, b) => b.coins - a.coins); // Sort by coins
     setLeaderboardData(sortedUsers);
-  }, [getAllUsersForLeaderboard, currentUser]);
+  }, [getAllUsersForLeaderboard, currentUser]); // Rerun if currentUser changes to highlight them
 
   if (leaderboardData.length === 0) {
     return (
@@ -76,8 +77,8 @@ export function LeaderboardTable() {
             </TableRow>
           ))}
         </TableBody>
+        {leaderboardData.length > 0 && <TableCaption>Leaderboard ranks users by coin balance.</TableCaption>}
       </Table>
-      {leaderboardData.length > 0 && <TableCaption>Leaderboard ranks users by coin balance.</TableCaption>}
     </ScrollArea>
   );
 }
