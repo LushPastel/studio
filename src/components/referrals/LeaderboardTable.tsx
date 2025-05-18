@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Coins, Hourglass } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/constants';
+import { API_BASE_URL } from '@/lib/constants'; // Keep for potential future use or error message
 
 interface UserForLeaderboard {
   id: string;
@@ -17,44 +17,28 @@ interface UserForLeaderboard {
 }
 
 export function LeaderboardTable() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, getAllUsersForLeaderboard } = useAuth();
   const [leaderboardData, setLeaderboardData] = useState<UserForLeaderboard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Keep for potential local errors
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setIsLoading(true);
-      setError(null);
-      if (API_BASE_URL === "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-        setError("Leaderboard API is not configured. Please deploy functions and update API_BASE_URL.");
-        setIsLoading(false);
-        setLeaderboardData([]); // Show empty state if API not configured
-        return;
-      }
-      try {
-        const response = await fetch(`${API_BASE_URL}/leaderboard`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.success && Array.isArray(data.leaderboard)) {
-          setLeaderboardData(data.leaderboard.slice(0, 15)); // Ensure top 15 from backend
-        } else {
-          throw new Error("Invalid data format from leaderboard API.");
-        }
-      } catch (e: any) {
-        console.error("Failed to fetch leaderboard:", e);
-        setError(e.message || "Could not load leaderboard data.");
-        setLeaderboardData([]); // Clear data on error
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLeaderboard();
-  }, []);
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Reverted to fetching from localStorage via AuthContext
+      const allUsers = getAllUsersForLeaderboard();
+      const sortedUsers = [...allUsers] // Create a copy before sorting
+        .sort((a, b) => (b.coins || 0) - (a.coins || 0));
+      setLeaderboardData(sortedUsers.slice(0, 15));
+    } catch (e: any) {
+      console.error("Failed to load leaderboard from localStorage:", e);
+      setError("Could not load leaderboard data.");
+      setLeaderboardData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getAllUsersForLeaderboard, currentUser]); // Depend on currentUser to re-fetch if user changes (e.g. logs out)
 
   if (isLoading) {
     return (
@@ -71,9 +55,6 @@ export function LeaderboardTable() {
         <Trophy className="mx-auto h-12 w-12 mb-4" />
         <p className="font-semibold">Error loading leaderboard:</p>
         <p>{error}</p>
-        {API_BASE_URL === "REPLACE_WITH_YOUR_LIVE_API_BASE_URL" && (
-            <p className="text-sm mt-2 text-muted-foreground">Please deploy your Firebase Functions and update the API_BASE_URL in `src/lib/constants.ts`.</p>
-        )}
       </div>
     );
   }
@@ -83,7 +64,7 @@ export function LeaderboardTable() {
       <div className="text-center py-10">
         <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-muted-foreground">The leaderboard is currently empty.</p>
-        <p className="text-sm text-muted-foreground">Earn coins to appear on the leaderboard!</p>
+        <p className="text-sm text-muted-foreground">Users will appear here as they earn coins.</p>
       </div>
     );
   }
