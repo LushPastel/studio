@@ -13,7 +13,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated) {
-      router.push('/dashboard');
+      router.push('/home'); // Updated redirection
     }
   }, [isLoadingAuth, isAuthenticated, router]);
 

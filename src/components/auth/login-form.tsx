@@ -62,7 +62,7 @@ export function LoginForm() {
     const success = await login(values.email, values.password);
     setIsLoading(false);
     if (success) {
-      router.push('/dashboard');
+      router.push('/home'); // Updated redirection
     } else {
       form.setError("password", { type: "manual", message: "Login failed. Check credentials." });
       form.resetField("password");

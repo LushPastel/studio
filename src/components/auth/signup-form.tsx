@@ -73,8 +73,7 @@ export function SignupForm() {
     const signupSuccess = await signup(values.name, values.email, values.password, values.referralCode);
 
     if (signupSuccess) {
-      // No longer need to call applyReferral here, it's handled within signup
-      router.push('/dashboard');
+      router.push('/home'); // Updated redirection
     } else {
       // If signup fails (e.g. email exists), an error toast is shown by AuthContext
       // Reset password fields for security/UX
