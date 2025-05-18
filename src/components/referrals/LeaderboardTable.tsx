@@ -24,13 +24,11 @@ export function LeaderboardTable() {
     const sortedUsers = users
       .map(u => ({
         id: u.id,
-        name: u.name,
-        coins: u.coins || 0,
+        name: u.name || 'Unnamed User', // Fallback for name
+        coins: Number(u.coins) || 0,    // Ensure coins is a number, default to 0
         photoURL: u.photoURL
       }))
-      // Removed filter: .filter(u => u.coins > 0) 
-      // Now, all registered users on the device will be shown
-      .sort((a, b) => b.coins - a.coins); 
+      .sort((a, b) => b.coins - a.coins);
     setLeaderboardData(sortedUsers);
   }, [getAllUsersForLeaderboard, currentUser]);
 
