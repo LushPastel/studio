@@ -11,7 +11,8 @@ import { Trophy, Coins } from 'lucide-react'; // Added Coins icon
 interface UserForLeaderboard {
   id: string;
   name: string;
-  coins: number; 
+  coins: number;
+  photoURL?: string;
 }
 
 export function LeaderboardTable() {
@@ -21,13 +22,15 @@ export function LeaderboardTable() {
   useEffect(() => {
     const users = getAllUsersForLeaderboard();
     const sortedUsers = users
-      .map(u => ({ 
-        id: u.id, 
-        name: u.name, 
-        coins: u.coins || 0 
+      .map(u => ({
+        id: u.id,
+        name: u.name,
+        coins: u.coins || 0,
+        photoURL: u.photoURL
       }))
-      .filter(u => u.coins > 0) // Optionally, only show users with some coins
-      .sort((a, b) => b.coins - a.coins); // Sort by coins descending
+      // Removed filter: .filter(u => u.coins > 0) 
+      // Now, all registered users on the device will be shown
+      .sort((a, b) => b.coins - a.coins); 
     setLeaderboardData(sortedUsers);
   }, [getAllUsersForLeaderboard, currentUser]);
 
@@ -35,8 +38,8 @@ export function LeaderboardTable() {
     return (
       <div className="text-center py-10">
         <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">The leaderboard is based on total coins.</p>
-        <p className="text-sm text-muted-foreground">Start earning coins to climb the ranks!</p>
+        <p className="text-muted-foreground">No users registered on this device yet.</p>
+        <p className="text-sm text-muted-foreground">Sign up to appear on the leaderboard!</p>
       </div>
     );
   }
@@ -52,12 +55,12 @@ export function LeaderboardTable() {
               <div className="flex items-center justify-end">
                 <Coins className="h-4 w-4 mr-1 text-yellow-400" /> Coins
               </div>
-            </TableHead> 
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {leaderboardData.map((user, index) => (
-            <TableRow 
+            <TableRow
               key={user.id}
               className={currentUser?.id === user.id ? 'bg-primary/10' : ''}
             >
@@ -76,8 +79,7 @@ export function LeaderboardTable() {
           ))}
         </TableBody>
       </Table>
-      {leaderboardData.length > 10 && <TableCaption>Showing top users by coin balance.</TableCaption>}
+      {leaderboardData.length > 0 && <TableCaption>Leaderboard ranks users by coin balance.</TableCaption>}
     </ScrollArea>
   );
 }
-
