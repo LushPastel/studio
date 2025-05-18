@@ -29,7 +29,8 @@ export function LeaderboardTable() {
         coins: Number(u.coins) || 0,    // Ensure coins is a number, default to 0
         photoURL: u.photoURL
       }))
-      .sort((a, b) => b.coins - a.coins); // Sort by coins
+      .sort((a, b) => b.coins - a.coins) // Sort by coins
+      .slice(0, 15); // Take top 15 users
     setLeaderboardData(sortedUsers);
   }, [getAllUsersForLeaderboard, currentUser]); // Rerun if currentUser changes to highlight them
 
@@ -37,8 +38,8 @@ export function LeaderboardTable() {
     return (
       <div className="text-center py-10">
         <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">No users registered on this device yet.</p>
-        <p className="text-sm text-muted-foreground">Sign up to appear on the leaderboard!</p>
+        <p className="text-muted-foreground">No users registered on this device yet, or no users have coins.</p>
+        <p className="text-sm text-muted-foreground">Sign up and earn coins to appear on the leaderboard!</p>
       </div>
     );
   }
@@ -77,7 +78,7 @@ export function LeaderboardTable() {
             </TableRow>
           ))}
         </TableBody>
-        {leaderboardData.length > 0 && <TableCaption>Leaderboard ranks users by coin balance.</TableCaption>}
+        {leaderboardData.length > 0 && <TableCaption>Top 15 users by coin balance.</TableCaption>}
       </Table>
     </ScrollArea>
   );
