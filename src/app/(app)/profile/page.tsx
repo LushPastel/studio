@@ -4,7 +4,7 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Hourglass, UserCog, BellRing, Languages, Palette, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
+import { Hourglass, UserCog, BellRing, Languages, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -129,8 +129,6 @@ export default function ProfilePage() {
         <ProfileListItem icon={BellRing} text="Notification Settings" href="/profile/notification-settings" />
         <Separator />
         <ProfileListItem icon={Languages} text="App Language" onClick={() => toast({ title: "Coming Soon", description: "Language selection will be available soon."})} />
-        <Separator />
-        <ProfileListItem icon={Palette} text="Theme" status="Coming Soon" />
         <Separator />
         <ProfileListItem icon={History} text="Reward History" href="/wallet" />
         <Separator />

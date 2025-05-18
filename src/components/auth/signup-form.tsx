@@ -50,7 +50,7 @@ const formSchema = z.object({
 });
 
 export function SignupForm() {
-  const { signup } = useAuth(); // Removed applyReferral as it's handled in signup
+  const { signup, googleSignIn } = useAuth(); // Removed applyReferral as it's handled in signup
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -222,7 +222,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-3">
-          <Button variant="outline" type="button" className="w-full">
+          <Button variant="outline" type="button" className="w-full" onClick={googleSignIn}>
             <GoogleIcon />
             Continue with Google
           </Button>
