@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Coins, TvMinimalPlayIcon } from 'lucide-react'; // Added Coins icon
+import { Coins, CircleDollarSign } from 'lucide-react'; // Changed TvMinimalPlayIcon to CircleDollarSign
 import { useAuth } from '@/context/auth-context';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ export function AppHeader() {
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
           )}
         >
-          <TvMinimalPlayIcon className="h-7 w-7" />
+          <CircleDollarSign className="h-7 w-7" /> {/* Changed Icon */}
           <span className="font-bold text-xl tracking-tighter sm:inline-block">
             {APP_NAME}
           </span>
