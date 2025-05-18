@@ -12,13 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Using Card for structure
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, Mail, Hourglass } from 'lucide-react'; // Changed MailLock to Mail, Loader2 to Hourglass
+import { ChevronLeft, Mail, Hourglass, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  photoURL: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   email: z.string().email(), // Will be read-only in the form
   gender: z.enum(["Not Specified", "Male", "Female", "Other"]),
   ageRange: z.enum(["Prefer not to say", "18-24", "25-34", "35-44", "45-54", "55+"]),
@@ -33,17 +34,17 @@ export default function EditProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Initialize with a static default, useEffect will set it from user data
   const [currentContactMethod, setCurrentContactMethod] = useState<'WhatsApp' | 'Instagram' | 'Telegram'>('WhatsApp');
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: '',
+      photoURL: '',
       email: '',
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
-      contactMethod: 'WhatsApp', // Default for the form data model
+      contactMethod: 'WhatsApp',
       contactDetail: '',
     },
   });
@@ -55,13 +56,13 @@ export default function EditProfilePage() {
       } else {
         form.reset({
           name: user.name || '',
+          photoURL: user.photoURL || '',
           email: user.email || '',
           gender: user.gender || 'Not Specified',
           ageRange: user.ageRange || 'Prefer not to say',
-          contactMethod: user.contactMethod || 'WhatsApp', // form data
+          contactMethod: user.contactMethod || 'WhatsApp',
           contactDetail: user.contactDetail || '',
         });
-        // State for Tabs component
         setCurrentContactMethod(user.contactMethod || 'WhatsApp');
       }
     }
@@ -69,10 +70,9 @@ export default function EditProfilePage() {
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
-    // Use currentContactMethod from state for the actual method,
-    // data.contactDetail is from the active tab's input
     const success = updateUser({
       name: data.name,
+      photoURL: data.photoURL,
       gender: data.gender,
       ageRange: data.ageRange,
       contactMethod: currentContactMethod, 
@@ -122,6 +122,20 @@ export default function EditProfilePage() {
               <Label htmlFor="name" className="text-foreground/80">Full Name</Label>
               <Input id="name" {...form.register("name")} className="mt-1 border-input focus:border-primary focus:ring-primary" />
               {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="photoURL" className="text-foreground/80">Profile Picture URL</Label>
+              <div className="relative mt-1">
+                 <ImageIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
+                <Input 
+                  id="photoURL" 
+                  {...form.register("photoURL")} 
+                  placeholder="https://example.com/image.png" 
+                  className="mt-1 border-input focus:border-primary focus:ring-primary pl-10" 
+                />
+              </div>
+              {form.formState.errors.photoURL && <p className="text-sm text-destructive mt-1">{form.formState.errors.photoURL.message}</p>}
             </div>
 
             <div>
