@@ -56,8 +56,8 @@ interface AuthContextType {
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => Promise<boolean>; // Now async
-  spendCoins: (amount: number) => Promise<boolean>; // Now async
+  addCoins: (amount: number) => Promise<boolean>; 
+  spendCoins: (amount: number) => Promise<boolean>; 
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
@@ -113,21 +113,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
           setUser({ 
-            coins: 0,
-            hasRatedApp: false,
-            referralsMade: 0,
-            weeklyReferralsMade: 0,
-            gender: 'Not Specified',
-            ageRange: 'Prefer not to say',
-            contactMethod: 'WhatsApp',
-            contactDetail: '',
-            notificationPreferences: {
+            coins: loggedInUser.coins || 0, // Ensure coins defaults to 0
+            hasRatedApp: loggedInUser.hasRatedApp || false,
+            referralsMade: loggedInUser.referralsMade || 0,
+            weeklyReferralsMade: loggedInUser.weeklyReferralsMade || 0,
+            gender: loggedInUser.gender || 'Not Specified',
+            ageRange: loggedInUser.ageRange || 'Prefer not to say',
+            contactMethod: loggedInUser.contactMethod || 'WhatsApp',
+            contactDetail: loggedInUser.contactDetail || '',
+            notificationPreferences: loggedInUser.notificationPreferences || {
               offers: true,
               promo: true,
               payments: true,
               updates: true,
             },
-            photoURL: undefined, 
+            photoURL: loggedInUser.photoURL || undefined, 
+            hasAppliedReferral: loggedInUser.hasAppliedReferral || false,
             ...userWithoutPassword 
           } as User);
           setIsAuthenticated(true);
@@ -191,31 +192,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
         allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
-        // weeklyReferralsMade is no longer relevant for rewards but can be kept for tracking if desired
         allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
       } else {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
     }
+    
+    // Add new user to Firestore via API
+    if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+      try {
+        // For a new user, we might want a /createUser endpoint or use /updateCoins if it can create users
+        // Let's assume /updateCoins can create if not exists, or a dedicated /createUser endpoint is preferred.
+        // For now, we'll create the user locally first, then attempt to sync.
+        // A robust solution would involve creating on backend first, or a more complex sync.
+        const createResponse = await fetch(`${API_BASE_URL}/updateCoins`, { // Or a dedicated /createUser
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ userId: finalNewUser.id, name: finalNewUser.name, email: finalNewUser.email, coins: finalNewUser.coins, photoURL: finalNewUser.photoURL }) // Send more details if needed
+        });
+        if (!createResponse.ok) {
+            const errorData = await createResponse.json();
+            console.error("Failed to create/sync new user to backend:", errorData.error || "Unknown error");
+            toast({ variant: "destructive", title: "Backend Sync Issue", description: "Could not create user profile on server. Proceeding locally." });
+        }
+      } catch (error) {
+          console.error("Error creating/syncing new user to backend:", error);
+          toast({ variant: "destructive", title: "Network Error", description: "Could not sync user profile. Proceeding locally." });
+      }
+    }
+
 
     const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser];
     saveAllUsers(updatedUsersArray);
-
-    // For API integration: After saving the user locally, you might want to also create them in your Firestore DB
-    // This part is conceptual for now until API URLs are live.
-    // try {
-    //   if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-    //     await fetch(`${API_BASE_URL}/createUser`, { // Assuming a /createUser endpoint
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //       body: JSON.stringify({ userId: finalNewUser.id, name: finalNewUser.name, email: finalNewUser.email, coins: finalNewUser.coins, photoURL: finalNewUser.photoURL })
-    //     });
-    //   }
-    // } catch (error) {
-    //   console.error("Failed to sync new user to backend:", error);
-    //   // Decide if this should block login or just be a silent failure for the prototype
-    // }
-
 
     const { password, ...userToSet } = finalNewUser;
     setUser(userToSet as User);
@@ -245,21 +253,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { password, ...userToSet } = foundUser;
      setUser({ 
-        coins: 0,
-        hasRatedApp: false,
-        referralsMade: 0,
-        weeklyReferralsMade: 0,
-        gender: 'Not Specified',
-        ageRange: 'Prefer not to say',
-        contactMethod: 'WhatsApp',
-        contactDetail: '',
-        notificationPreferences: {
+        coins: foundUser.coins || 0,
+        hasRatedApp: foundUser.hasRatedApp || false,
+        referralsMade: foundUser.referralsMade || 0,
+        weeklyReferralsMade: foundUser.weeklyReferralsMade || 0,
+        gender: foundUser.gender || 'Not Specified',
+        ageRange: foundUser.ageRange || 'Prefer not to say',
+        contactMethod: foundUser.contactMethod || 'WhatsApp',
+        contactDetail: foundUser.contactDetail || '',
+        notificationPreferences: foundUser.notificationPreferences || {
           offers: true,
           promo: true,
           payments: true,
           updates: true,
         },
-        photoURL: undefined,
+        photoURL: foundUser.photoURL || undefined,
+        hasAppliedReferral: foundUser.hasAppliedReferral || false,
         ...userToSet 
       } as User);
     setIsAuthenticated(true);
@@ -327,17 +336,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`${API_BASE_URL}/updateCoins`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // TODO: Add Authorization header if your API requires it
         body: JSON.stringify({ userId: user.id, coins: newCoins }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        toast({ variant: "destructive", title: "Coin Update Failed (Backend)", description: errorData.error || "Could not sync coin update." });
+        toast({ variant: "destructive", title: "Coin Update Failed", description: errorData.error || "Could not sync coin update with server." });
         return false;
       }
       // Success, update local state
       const updatedUserForState = { ...user, coins: newCoins };
       setUser(updatedUserForState);
-      // Also update localStorage for consistency if other parts of the app read from it directly (though ideally they shouldn't for coins now)
       const fullUserFromStorage = getFullUserFromStorage(user.id);
       if (fullUserFromStorage) {
         updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
@@ -352,7 +361,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const spendCoins = async (amount: number): Promise<boolean> => {
     if (!user || (user.coins || 0) < amount) {
-      toast({ variant: "destructive", title: "Not enough coins", description: "You don't have enough coins for this purchase." });
+      toast({ variant: "destructive", title: "Not enough coins", description: "You don't have enough coins for this action." });
       return false;
     }
     const newCoins = (user.coins || 0) - amount;
@@ -372,11 +381,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`${API_BASE_URL}/updateCoins`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // TODO: Add Authorization header if your API requires it
         body: JSON.stringify({ userId: user.id, coins: newCoins }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        toast({ variant: "destructive", title: "Coin Spending Failed (Backend)", description: errorData.error || "Could not sync coin spending." });
+        toast({ variant: "destructive", title: "Coin Spending Failed", description: errorData.error || "Could not sync coin spending with server." });
         return false;
       }
       const updatedUserForState = { ...user, coins: newCoins };
@@ -494,20 +504,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (fullUserFromStorage) {
          updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
     }
+    
     // Conceptual: update backend if profile details were changed that need to be synced.
-    // if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-    //   fetch(`${API_BASE_URL}/updateProfile`, { method: 'POST', body: JSON.stringify({ userId: user.id, ...updatedDetails }) });
+    // This would typically involve a different endpoint, e.g., /updateProfile
+    // if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL" && (updatedDetails.name || updatedDetails.photoURL)) {
+    //   fetch(`${API_BASE_URL}/updateProfile`, { // Assuming a /updateProfile endpoint
+    //      method: 'POST', 
+    //      headers: { 'Content-Type': 'application/json' },
+    //      body: JSON.stringify({ userId: user.id, name: updatedDetails.name, photoURL: updatedDetails.photoURL }) 
+    //   });
     // }
 
     return true;
   };
 
   const processWeeklyLeaderboardReset = () => {
+    // This function is now a no-op for rewards and weekly reset, as per previous changes.
+    // Leaderboard is based on total coins from API.
     console.log("Weekly leaderboard reset triggered. Leaderboard now based on total coins directly from API. No weekly rewards/reset needed in frontend.");
     toast({ title: "Leaderboard Updated", description: "Leaderboard reflects live coin data." });
   };
 
-  const googleSignIn = () => {
+  const googleSignIn = async () => { // Made async
     const mockGoogleUserEmail = "google.user@example.com";
     const mockGoogleUserName = "Google User";
     const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G"; 
@@ -516,7 +534,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
 
     if (!googleUser) {
-      const newGoogleUser: User = {
+      const newGoogleUserBase: User = {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
@@ -540,37 +558,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
         photoURL: mockGoogleUserPhotoURL,
       };
-      allUsers.push(newGoogleUser);
+      
+      // Sync new Google user to backend
+      if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+         try {
+            const createResponse = await fetch(`${API_BASE_URL}/updateCoins`, { // Or a dedicated /createUser
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ userId: newGoogleUserBase.id, name: newGoogleUserBase.name, email: newGoogleUserBase.email, coins: newGoogleUserBase.coins, photoURL: newGoogleUserBase.photoURL })
+            });
+            if (!createResponse.ok) {
+                const errorData = await createResponse.json();
+                console.error("Failed to create/sync new Google user to backend:", errorData.error || "Unknown error");
+                toast({ variant: "destructive", title: "Backend Sync Issue", description: "Could not create Google user profile on server." });
+                 // Decide if this should prevent login. For prototype, we might allow local to proceed.
+            }
+          } catch (error) {
+              console.error("Error creating/syncing new Google user to backend:", error);
+              toast({ variant: "destructive", title: "Network Error", description: "Could not sync Google user profile." });
+              // Decide if this should prevent login.
+          }
+      }
+      allUsers.push(newGoogleUserBase);
       saveAllUsers(allUsers);
-      googleUser = newGoogleUser;
-      // Conceptual: If user is new via Google, create in backend if API is live
-      // if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-      //   fetch(`${API_BASE_URL}/createUser`, { method: 'POST', body: JSON.stringify({ userId: newGoogleUser.id, name: newGoogleUser.name, email: newGoogleUser.email, coins: newGoogleUser.coins, photoURL: newGoogleUser.photoURL }) });
-      // }
+      googleUser = newGoogleUserBase;
+
+    } else {
+        // Ensure existing Google user's photoURL is updated if it wasn't set or changed
+        if (!googleUser.photoURL || googleUser.photoURL !== mockGoogleUserPhotoURL) {
+            googleUser.photoURL = mockGoogleUserPhotoURL;
+            updateUserInStorage(googleUser.id, { photoURL: mockGoogleUserPhotoURL });
+            // Optionally, sync this photoURL update to backend if it changed
+            if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+                try {
+                    await fetch(`${API_BASE_URL}/updateCoins`, { // Assuming /updateCoins can also update photoURL
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ userId: googleUser.id, photoURL: mockGoogleUserPhotoURL })
+                    });
+                } catch (error) {
+                    console.error("Error syncing Google user photoURL to backend:", error);
+                }
+            }
+        }
     }
     
-    if (googleUser && !googleUser.photoURL) {
-        googleUser.photoURL = mockGoogleUserPhotoURL;
-        updateUserInStorage(googleUser.id, { photoURL: mockGoogleUserPhotoURL });
-    }
-
 
     const { password, ...userToSet } = googleUser;
      setUser({ 
-        coins: 0,
-        hasRatedApp: false,
-        referralsMade: 0,
-        weeklyReferralsMade: 0,
-        gender: 'Not Specified',
-        ageRange: 'Prefer not to say',
-        contactMethod: 'WhatsApp',
-        contactDetail: '',
-        notificationPreferences: {
+        coins: googleUser.coins || 0,
+        hasRatedApp: googleUser.hasRatedApp || false,
+        referralsMade: googleUser.referralsMade || 0,
+        weeklyReferralsMade: googleUser.weeklyReferralsMade || 0,
+        gender: googleUser.gender || 'Not Specified',
+        ageRange: googleUser.ageRange || 'Prefer not to say',
+        contactMethod: googleUser.contactMethod || 'WhatsApp',
+        contactDetail: googleUser.contactDetail || '',
+        notificationPreferences: googleUser.notificationPreferences || {
           offers: true,
           promo: true,
           payments: true,
           updates: true,
         },
+        hasAppliedReferral: googleUser.hasAppliedReferral || false,
         ...userToSet 
       } as User);
     setIsAuthenticated(true);

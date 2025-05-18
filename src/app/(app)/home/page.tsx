@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from 'react'; // Added React import
+import React, { useEffect } from 'react'; 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react';
@@ -49,14 +49,12 @@ export default function HomePage() {
     );
   }
 
-  const handleRateUs = async () => { // Made async
+  const handleRateUs = async () => { 
     if (user && !user.hasRatedApp) {
-      const success = await addCoins(20); // Await the promise
+      const success = await addCoins(20); 
       if (success) {
         updateUser({ hasRatedApp: true });
         toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
-      } else {
-        // Toast for failure is handled by addCoins itself
       }
     } else if (user && user.hasRatedApp) {
       toast({ title: "Already Rated", description: "You've already claimed this bonus!" });
@@ -74,14 +72,12 @@ export default function HomePage() {
         </h1>
       </div>
 
-      {/* Shop Promo Card Section */}
       <section>
         <ShopPromoCard />
       </section>
 
       <Separator />
 
-      {/* Dash & Cash Section */}
       <section className="space-y-4">
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
@@ -104,7 +100,6 @@ export default function HomePage() {
 
       <Separator />
 
-      {/* Top tasks Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Top tasks</h3>
         <div className="grid grid-cols-3 gap-4">
@@ -135,7 +130,6 @@ export default function HomePage() {
 
       <Separator />
 
-      {/* Trending Tasks Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Trending Tasks</h3>
         <div className="grid grid-cols-3 gap-4">
@@ -163,7 +157,6 @@ export default function HomePage() {
 
       <Separator />
 
-      {/* Trending Survey Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Trending Survey</h3>
         <div className="grid grid-cols-3 gap-4">
@@ -192,7 +185,6 @@ export default function HomePage() {
 
       <Separator />
 
-      {/* Bonus Offers Section */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Bonus Offers</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">

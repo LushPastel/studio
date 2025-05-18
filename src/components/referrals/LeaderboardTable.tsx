@@ -91,6 +91,7 @@ export function LeaderboardTable() {
   return (
     <ScrollArea className="h-[400px] rounded-md border border-border">
       <Table>
+        <TableCaption>Top 15 users by coin balance.</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px]">Rank</TableHead>
@@ -122,7 +123,6 @@ export function LeaderboardTable() {
             </TableRow>
           ))}
         </TableBody>
-        {leaderboardData.length > 0 && <TableCaption>Top users by coin balance.</TableCaption>}
       </Table>
     </ScrollArea>
   );
