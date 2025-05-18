@@ -106,7 +106,11 @@ export default function ProfilePage() {
     <div className="pb-8 max-w-2xl mx-auto px-2 sm:px-4">
       <div className="flex flex-col items-center py-8 space-y-3">
         <Avatar className="h-24 w-24 border-2 border-primary">
-          <AvatarImage src={`https://placehold.co/100x100.png?text=${user.name.charAt(0)}`} alt={user.name} data-ai-hint="avatar person" />
+          <AvatarImage 
+            src={user.photoURL || `https://placehold.co/100x100.png?text=${user.name.charAt(0)}`} 
+            alt={user.name} 
+            data-ai-hint={user.photoURL ? "profile photo" : "avatar person"}
+          />
           <AvatarFallback className="text-4xl">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>

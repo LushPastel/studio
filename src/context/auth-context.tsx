@@ -27,7 +27,7 @@ interface User {
   coins: number;
   referralCode: string;
   referralsMade: number;
-  weeklyReferralsMade: number;
+  weeklyReferralsMade: number; // This field is no longer used for leaderboard rewards
   hasAppliedReferral?: boolean;
   hasRatedApp?: boolean;
   // Profile fields
@@ -37,6 +37,7 @@ interface User {
   contactDetail?: string;
   // Notification preferences
   notificationPreferences?: NotificationPreferences;
+  photoURL?: string; // Added for Google profile picture
 }
 
 export interface WithdrawalRequest {
@@ -63,12 +64,12 @@ interface AuthContextType {
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
   getAllUsersForLeaderboard: () => User[];
   processWeeklyLeaderboardReset: () => void;
-  googleSignIn: () => void; // Placeholder for Google Sign-In
+  googleSignIn: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const generateReferralCode = () => `CASHQUERY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+const generateReferralCode = () => `${APP_NAME.toUpperCase()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
 // Helper to get all users from localStorage
 const getAllUsers = (): User[] => {
@@ -127,6 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               payments: true,
               updates: true,
             },
+            photoURL: undefined, // Default for photoURL
             ...userWithoutPassword // Spread the loaded user data last to override defaults
           } as User);
           setIsAuthenticated(true);
@@ -176,6 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         payments: true,
         updates: true,
       },
+      photoURL: undefined, // New users via email/password don't have a photoURL
     };
 
     let finalNewUser = { ...newUserBase };
@@ -240,6 +243,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           payments: true,
           updates: true,
         },
+        photoURL: undefined,
         ...userToSet // Spread the loaded user data last to override defaults
       } as User);
     setIsAuthenticated(true);
@@ -426,15 +430,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const processWeeklyLeaderboardReset = () => {
-    // This function no longer awards coins or resets weekly referrals.
-    // It can be a placeholder for other weekly tasks or simply log an action.
-    console.log("Processing weekly leaderboard (no rewards/reset for referrals as per new logic).");
-    toast({ title: "Weekly Process Triggered", description: "Leaderboard criteria is now based on total coins. No weekly referral rewards are active." });
+    // This function no longer awards coins or resets weekly referrals based on weekly referral counts.
+    // Leaderboard is now based on total coins.
+    console.log("Processing weekly actions (leaderboard based on total coins, no specific weekly referral rewards).");
+    toast({ title: "Weekly Process Triggered", description: "Leaderboard is based on total coins. No weekly referral rewards are active." });
   };
 
   const googleSignIn = () => {
-    // Placeholder for Google Sign-In
-    toast({ title: "Coming Soon", description: "Google Sign-In will be available in a future update." });
+    const mockGoogleUserEmail = "google.user@example.com";
+    const mockGoogleUserName = "Google User";
+    // Using a simple placehold.co image that displays a letter 'G'
+    const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G"; 
+
+    let allUsers = getAllUsers();
+    let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
+
+    if (!googleUser) {
+      // If mock Google user doesn't exist, create them
+      const newGoogleUser: User = {
+        id: `user-google-${Date.now()}`,
+        email: mockGoogleUserEmail,
+        name: mockGoogleUserName,
+        password: "mockpassword", // Placeholder, not used for actual auth
+        balance: 0,
+        coins: 0,
+        referralCode: generateReferralCode(),
+        referralsMade: 0,
+        weeklyReferralsMade: 0,
+        hasAppliedReferral: false,
+        hasRatedApp: false,
+        gender: 'Not Specified',
+        ageRange: 'Prefer not to say',
+        contactMethod: 'WhatsApp',
+        contactDetail: '',
+        notificationPreferences: {
+          offers: true,
+          promo: true,
+          payments: true,
+          updates: true,
+        },
+        photoURL: mockGoogleUserPhotoURL,
+      };
+      allUsers.push(newGoogleUser);
+      saveAllUsers(allUsers);
+      googleUser = newGoogleUser;
+    }
+    
+    // Ensure the photoURL is set if the user exists but might not have it (e.g., if created before photoURL field)
+    if (googleUser && !googleUser.photoURL) {
+        googleUser.photoURL = mockGoogleUserPhotoURL;
+        updateUserInStorage(googleUser.id, { photoURL: mockGoogleUserPhotoURL });
+    }
+
+
+    const { password, ...userToSet } = googleUser;
+     setUser({ // Ensure all fields have defaults
+        coins: 0,
+        hasRatedApp: false,
+        referralsMade: 0,
+        weeklyReferralsMade: 0,
+        gender: 'Not Specified',
+        ageRange: 'Prefer not to say',
+        contactMethod: 'WhatsApp',
+        contactDetail: '',
+        notificationPreferences: {
+          offers: true,
+          promo: true,
+          payments: true,
+          updates: true,
+        },
+        ...userToSet // Spread the loaded user data last to override defaults
+      } as User);
+    setIsAuthenticated(true);
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(LS_CURRENT_USER_ID_KEY, googleUser.id);
+        const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${googleUser.id}`);
+        setWithdrawalHistory(storedHistory ? JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })) : []);
+    }
+
+    toast({ title: "Signed in with Google (Simulated)", description: `Welcome, ${googleUser.name}!` });
+    // Manually trigger router push if not already handled by an effect.
+    // Since this is a prototype, direct navigation is fine here.
+    // A more robust solution would use Next.js router.
+    window.location.href = '/home'; 
   };
 
 
