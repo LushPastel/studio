@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { AD_REWARD, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME } from '@/lib/constants';
+import { AD_REWARD, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME, API_BASE_URL } from '@/lib/constants';
 
 // Constants for localStorage keys
 const LS_USERS_KEY = 'cashquery-users';
@@ -27,7 +27,7 @@ interface User {
   coins: number;
   referralCode: string;
   referralsMade: number;
-  weeklyReferralsMade: number; // This field is no longer used for leaderboard rewards
+  weeklyReferralsMade: number; 
   hasAppliedReferral?: boolean;
   hasRatedApp?: boolean;
   // Profile fields
@@ -37,7 +37,7 @@ interface User {
   contactDetail?: string;
   // Notification preferences
   notificationPreferences?: NotificationPreferences;
-  photoURL?: string; // Added for Google profile picture
+  photoURL?: string; 
 }
 
 export interface WithdrawalRequest {
@@ -56,13 +56,12 @@ interface AuthContextType {
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => void;
-  spendCoins: (amount: number) => boolean;
+  addCoins: (amount: number) => Promise<boolean>; // Now async
+  spendCoins: (amount: number) => Promise<boolean>; // Now async
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
-  getAllUsersForLeaderboard: () => User[];
   processWeeklyLeaderboardReset: () => void;
   googleSignIn: () => void;
 }
@@ -113,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({ // Ensure all fields have defaults
+          setUser({ 
             coins: 0,
             hasRatedApp: false,
             referralsMade: 0,
@@ -128,8 +127,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               payments: true,
               updates: true,
             },
-            photoURL: undefined, // Default for photoURL
-            ...userWithoutPassword // Spread the loaded user data last to override defaults
+            photoURL: undefined, 
+            ...userWithoutPassword 
           } as User);
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
@@ -178,13 +177,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         payments: true,
         updates: true,
       },
-      photoURL: undefined, // New users via email/password don't have a photoURL
+      photoURL: undefined, 
     };
 
     let finalNewUser = { ...newUserBase };
 
     if (referralCodeInput) {
-      const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === referralCodeInput.toUpperCase() && u.id !== finalNewUser.id);
+      const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === referralCodeInput.trim().toUpperCase() && u.id !== finalNewUser.id);
       if (referrerIndex !== -1) {
         finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
         finalNewUser.hasAppliedReferral = true;
@@ -192,6 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
         allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
+        // weeklyReferralsMade is no longer relevant for rewards but can be kept for tracking if desired
         allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
       } else {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
@@ -200,6 +200,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser];
     saveAllUsers(updatedUsersArray);
+
+    // For API integration: After saving the user locally, you might want to also create them in your Firestore DB
+    // This part is conceptual for now until API URLs are live.
+    // try {
+    //   if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+    //     await fetch(`${API_BASE_URL}/createUser`, { // Assuming a /createUser endpoint
+    //       method: 'POST',
+    //       headers: { 'Content-Type': 'application/json' },
+    //       body: JSON.stringify({ userId: finalNewUser.id, name: finalNewUser.name, email: finalNewUser.email, coins: finalNewUser.coins, photoURL: finalNewUser.photoURL })
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.error("Failed to sync new user to backend:", error);
+    //   // Decide if this should block login or just be a silent failure for the prototype
+    // }
+
 
     const { password, ...userToSet } = finalNewUser;
     setUser(userToSet as User);
@@ -228,7 +244,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-     setUser({ // Ensure all fields have defaults
+     setUser({ 
         coins: 0,
         hasRatedApp: false,
         referralsMade: 0,
@@ -244,7 +260,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           updates: true,
         },
         photoURL: undefined,
-        ...userToSet // Spread the loaded user data last to override defaults
+        ...userToSet 
       } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
@@ -292,32 +308,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addCoins = (amount: number) => {
-    if (!user) return;
+  const addCoins = async (amount: number): Promise<boolean> => {
+    if (!user) return false;
     const newCoins = (user.coins || 0) + amount;
-    const updatedUserForState = { ...user, coins: newCoins };
-    setUser(updatedUserForState);
 
-    const fullUserFromStorage = getFullUserFromStorage(user.id);
-    if (fullUserFromStorage) {
-      updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+    if (API_BASE_URL === "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+      console.warn("API_BASE_URL is not set. Updating coins in localStorage only.");
+      const updatedUserForState = { ...user, coins: newCoins };
+      setUser(updatedUserForState);
+      const fullUserFromStorage = getFullUserFromStorage(user.id);
+      if (fullUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+      }
+      return true;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/updateCoins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, coins: newCoins }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast({ variant: "destructive", title: "Coin Update Failed (Backend)", description: errorData.error || "Could not sync coin update." });
+        return false;
+      }
+      // Success, update local state
+      const updatedUserForState = { ...user, coins: newCoins };
+      setUser(updatedUserForState);
+      // Also update localStorage for consistency if other parts of the app read from it directly (though ideally they shouldn't for coins now)
+      const fullUserFromStorage = getFullUserFromStorage(user.id);
+      if (fullUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+      }
+      return true;
+    } catch (error) {
+      console.error("Error updating coins via API:", error);
+      toast({ variant: "destructive", title: "Network Error", description: "Could not update coins. Please try again." });
+      return false;
     }
   };
 
-  const spendCoins = (amount: number): boolean => {
+  const spendCoins = async (amount: number): Promise<boolean> => {
     if (!user || (user.coins || 0) < amount) {
       toast({ variant: "destructive", title: "Not enough coins", description: "You don't have enough coins for this purchase." });
       return false;
     }
     const newCoins = (user.coins || 0) - amount;
-    const updatedUserForState = { ...user, coins: newCoins };
-    setUser(updatedUserForState);
 
-    const fullUserFromStorage = getFullUserFromStorage(user.id);
-    if (fullUserFromStorage) {
-      updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+    if (API_BASE_URL === "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+      console.warn("API_BASE_URL is not set. Updating coins in localStorage only.");
+      const updatedUserForState = { ...user, coins: newCoins };
+      setUser(updatedUserForState);
+      const fullUserFromStorage = getFullUserFromStorage(user.id);
+      if (fullUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+      }
+      return true;
     }
-    return true;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/updateCoins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, coins: newCoins }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast({ variant: "destructive", title: "Coin Spending Failed (Backend)", description: errorData.error || "Could not sync coin spending." });
+        return false;
+      }
+      const updatedUserForState = { ...user, coins: newCoins };
+      setUser(updatedUserForState);
+      const fullUserFromStorage = getFullUserFromStorage(user.id);
+      if (fullUserFromStorage) {
+        updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
+      }
+      return true;
+    } catch (error) {
+      console.error("Error spending coins via API:", error);
+      toast({ variant: "destructive", title: "Network Error", description: "Could not spend coins. Please try again." });
+      return false;
+    }
   };
 
 
@@ -372,7 +445,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     let allUsers = getAllUsers();
-    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === code.toUpperCase() && u.id !== user.id);
+    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === code.trim().toUpperCase() && u.id !== user.id);
 
     if (referrerIndex === -1) {
       toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code is invalid or does not exist." });
@@ -421,37 +494,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (fullUserFromStorage) {
          updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
     }
+    // Conceptual: update backend if profile details were changed that need to be synced.
+    // if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+    //   fetch(`${API_BASE_URL}/updateProfile`, { method: 'POST', body: JSON.stringify({ userId: user.id, ...updatedDetails }) });
+    // }
 
     return true;
   };
 
-  const getAllUsersForLeaderboard = (): User[] => {
-    return getAllUsers();
-  };
-
   const processWeeklyLeaderboardReset = () => {
-    // This function no longer awards coins or resets weekly referrals based on weekly referral counts.
-    // Leaderboard is now based on total coins.
-    console.log("Processing weekly actions (leaderboard based on total coins, no specific weekly referral rewards).");
-    toast({ title: "Weekly Process Triggered", description: "Leaderboard is based on total coins. No weekly referral rewards are active." });
+    console.log("Weekly leaderboard reset triggered. Leaderboard now based on total coins directly from API. No weekly rewards/reset needed in frontend.");
+    toast({ title: "Leaderboard Updated", description: "Leaderboard reflects live coin data." });
   };
 
   const googleSignIn = () => {
     const mockGoogleUserEmail = "google.user@example.com";
     const mockGoogleUserName = "Google User";
-    // Using a simple placehold.co image that displays a letter 'G'
     const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G"; 
 
     let allUsers = getAllUsers();
     let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
 
     if (!googleUser) {
-      // If mock Google user doesn't exist, create them
       const newGoogleUser: User = {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword", // Placeholder, not used for actual auth
+        password: "mockpassword", 
         balance: 0,
         coins: 0,
         referralCode: generateReferralCode(),
@@ -474,9 +543,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       allUsers.push(newGoogleUser);
       saveAllUsers(allUsers);
       googleUser = newGoogleUser;
+      // Conceptual: If user is new via Google, create in backend if API is live
+      // if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+      //   fetch(`${API_BASE_URL}/createUser`, { method: 'POST', body: JSON.stringify({ userId: newGoogleUser.id, name: newGoogleUser.name, email: newGoogleUser.email, coins: newGoogleUser.coins, photoURL: newGoogleUser.photoURL }) });
+      // }
     }
     
-    // Ensure the photoURL is set if the user exists but might not have it (e.g., if created before photoURL field)
     if (googleUser && !googleUser.photoURL) {
         googleUser.photoURL = mockGoogleUserPhotoURL;
         updateUserInStorage(googleUser.id, { photoURL: mockGoogleUserPhotoURL });
@@ -484,7 +556,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
     const { password, ...userToSet } = googleUser;
-     setUser({ // Ensure all fields have defaults
+     setUser({ 
         coins: 0,
         hasRatedApp: false,
         referralsMade: 0,
@@ -499,7 +571,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           payments: true,
           updates: true,
         },
-        ...userToSet // Spread the loaded user data last to override defaults
+        ...userToSet 
       } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
@@ -509,9 +581,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     toast({ title: "Signed in with Google (Simulated)", description: `Welcome, ${googleUser.name}!` });
-    // Manually trigger router push if not already handled by an effect.
-    // Since this is a prototype, direct navigation is fine here.
-    // A more robust solution would use Next.js router.
     window.location.href = '/home'; 
   };
 
@@ -531,7 +600,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         withdrawalHistory,
         applyReferral,
         updateUser,
-        getAllUsersForLeaderboard,
         processWeeklyLeaderboardReset,
         googleSignIn
     }}>
@@ -547,4 +615,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

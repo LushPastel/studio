@@ -33,17 +33,15 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-// Utility function to create an Image object from a source URL
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
     image.addEventListener('error', (error) => reject(error));
-    image.setAttribute('crossOrigin', 'anonymous'); // Needed for tainted canvas
+    image.setAttribute('crossOrigin', 'anonymous'); 
     image.src = url;
   });
 
-// Utility function to get a cropped image as a Data URI
 async function getCroppedImg(
   imageSrc: string,
   pixelCrop: Area
@@ -71,7 +69,7 @@ async function getCroppedImg(
     pixelCrop.height
   );
 
-  return canvas.toDataURL('image/jpeg'); // Or image/png for transparency
+  return canvas.toDataURL('image/jpeg'); 
 }
 
 
@@ -85,7 +83,6 @@ export default function EditProfilePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cropper state
   const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -125,14 +122,14 @@ export default function EditProfilePage() {
     }
   }, [isLoadingAuth, isAuthenticated, user, router, form]);
 
-  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixelsVal: Area) => {
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixelsVal: Area) => {
     setCroppedAreaPixels(croppedAreaPixelsVal);
   }, []);
 
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           variant: "destructive",
           title: "Image Too Large",
@@ -144,8 +141,8 @@ export default function EditProfilePage() {
       reader.onloadend = () => {
         setOriginalImageSrc(reader.result as string);
         setShowCropperDialog(true);
-        setZoom(1); // Reset zoom when new image is selected
-        setCrop({ x: 0, y: 0 }); // Reset crop
+        setZoom(1); 
+        setCrop({ x: 0, y: 0 }); 
       };
       reader.readAsDataURL(file);
     }
@@ -166,7 +163,7 @@ export default function EditProfilePage() {
       toast({ variant: "destructive", title: "Cropping Failed", description: "Could not process the image. Please try another one." });
     }
     setShowCropperDialog(false);
-    setOriginalImageSrc(null); // Clear original image after cropping
+    setOriginalImageSrc(null); 
   };
 
 
@@ -258,7 +255,6 @@ export default function EditProfilePage() {
                {form.formState.errors.photoURL && <p className="text-sm text-destructive mt-1">{form.formState.errors.photoURL.message}</p>}
             </div>
 
-            {/* Other form fields remain the same */}
             <div>
               <Label htmlFor="name" className="text-foreground/80">Full Name</Label>
               <Input id="name" {...form.register("name")} className="mt-1 border-input focus:border-primary focus:ring-primary" />
@@ -374,9 +370,9 @@ export default function EditProfilePage() {
 
       {showCropperDialog && originalImageSrc && (
         <Dialog open={showCropperDialog} onOpenChange={(open) => {
-          if (!open) { // If dialog is closed (e.g. by clicking outside or X)
+          if (!open) { 
             setShowCropperDialog(false);
-            setOriginalImageSrc(null); // Clear the original image src if crop is cancelled
+            setOriginalImageSrc(null); 
           } else {
             setShowCropperDialog(true);
           }

@@ -1,9 +1,7 @@
 
 "use client";
 
-import { useAuth } from '@/context/auth-context';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import React, { useAuth, useRouter, useEffect, useState } from 'react'; // Added React for ProfileListItem
 import { Hourglass, UserCog, BellRing, Languages, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';

@@ -1,13 +1,13 @@
 
 "use client";
 
+import React, { useEffect } from 'react'; // Added React import
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
 import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
-import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard';
+import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; 
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
 import { useToast } from '@/hooks/use-toast';
 import { APP_NAME } from '@/lib/constants';
@@ -49,11 +49,15 @@ export default function HomePage() {
     );
   }
 
-  const handleRateUs = () => {
+  const handleRateUs = async () => { // Made async
     if (user && !user.hasRatedApp) {
-      addCoins(20);
-      updateUser({ hasRatedApp: true });
-      toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
+      const success = await addCoins(20); // Await the promise
+      if (success) {
+        updateUser({ hasRatedApp: true });
+        toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
+      } else {
+        // Toast for failure is handled by addCoins itself
+      }
     } else if (user && user.hasRatedApp) {
       toast({ title: "Already Rated", description: "You've already claimed this bonus!" });
     }
@@ -152,7 +156,7 @@ export default function HomePage() {
             title="See All"
             cardType="seeAll"
             className="bg-purple-600 text-white"
-            href="/all-tasks" // Example link
+            href="/all-tasks" 
           />
         </div>
       </section>
@@ -181,7 +185,7 @@ export default function HomePage() {
             title="See All"
             cardType="seeAll"
             className="bg-purple-600 text-white"
-            href="/all-surveys" // Example link
+            href="/all-surveys" 
           />
         </div>
       </section>
