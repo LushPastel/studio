@@ -43,7 +43,7 @@ app.post("/updateCoins", async (req, res) => {
 
     if (!userDoc.exists) {
       // If you want to create the user if they don't exist with these coins:
-      // await userRef.set({ coins: coins }, { merge: true });
+      // await userRef.set({ coins: coins }, { merge: true }); 
       // For this example, we'll assume user must exist to update coins
       return res.status(404).json({ success: false, error: "User not found" });
     }
