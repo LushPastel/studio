@@ -11,7 +11,7 @@ import { Trophy, Coins } from 'lucide-react'; // Added Coins icon
 interface UserForLeaderboard {
   id: string;
   name: string;
-  coins: number; // Changed from weeklyReferralsMade
+  coins: number; 
 }
 
 export function LeaderboardTable() {
@@ -24,7 +24,7 @@ export function LeaderboardTable() {
       .map(u => ({ 
         id: u.id, 
         name: u.name, 
-        coins: u.coins || 0 // Use total coins for ranking
+        coins: u.coins || 0 
       }))
       .filter(u => u.coins > 0) // Optionally, only show users with some coins
       .sort((a, b) => b.coins - a.coins); // Sort by coins descending
@@ -65,7 +65,7 @@ export function LeaderboardTable() {
               <TableCell>
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={`https://placehold.co/40x40.png?text=${user.name.charAt(0)}`} alt={user.name} data-ai-hint="avatar person" />
+                    <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png?text=${user.name.charAt(0)}`} alt={user.name} data-ai-hint="avatar person" />
                     <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <span>{user.name}</span>
@@ -80,3 +80,4 @@ export function LeaderboardTable() {
     </ScrollArea>
   );
 }
+
