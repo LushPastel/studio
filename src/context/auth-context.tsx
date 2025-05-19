@@ -42,7 +42,6 @@ interface User {
   adsWatchedToday: number;
   lastAdWatchDate: string;
   dailyCheckIns: string[];
-  appLanguage: string; 
 }
 
 export interface WithdrawalRequest {
@@ -70,8 +69,6 @@ interface AuthContextType {
   googleSignIn: () => Promise<void>;
   getAllUsersForLeaderboard: () => User[];
   recordAdWatchAndCheckIn: () => Promise<boolean>;
-  appLanguage: string;
-  setAppLanguage: (language: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,12 +103,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
-  const [appLanguage, setAppLanguageState] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('appLanguage') || 'en-US';
-    }
-    return 'en-US';
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -122,9 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let loggedInUser: User | undefined;
     try {
       const currentUserId = localStorage.getItem(LS_CURRENT_USER_ID_KEY);
-      const storedLanguage = localStorage.getItem('appLanguage') || 'en-US';
-      setAppLanguageState(storedLanguage);
-
+      
       if (currentUserId) {
         const users = getAllUsers();
         loggedInUser = users.find(u => u.id === currentUserId);
@@ -151,8 +140,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           loggedInUser.adsWatchedToday = Number(loggedInUser.adsWatchedToday) || 0;
           loggedInUser.lastAdWatchDate = loggedInUser.lastAdWatchDate || "";
           loggedInUser.dailyCheckIns = Array.isArray(loggedInUser.dailyCheckIns) ? loggedInUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
-          loggedInUser.appLanguage = loggedInUser.appLanguage || storedLanguage;
-
 
           if (loggedInUser.lastAdWatchDate !== today) {
             loggedInUser.adsWatchedToday = 0;
@@ -194,16 +181,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoadingAuth(false);
   }, []);
-
-  const setAppLanguage = (language: string) => {
-    setAppLanguageState(language);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('appLanguage', language);
-    }
-    if (user) {
-      updateUser({ appLanguage: language });
-    }
-  };
 
   const updateUserInStorage = (userId: string, updatedDetails: Partial<User>): User | undefined => {
     let users = getAllUsers();
@@ -249,7 +226,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: 0,
       lastAdWatchDate: "",
       dailyCheckIns: [],
-      appLanguage: appLanguage, 
     };
 
     if (referralCodeInput) {
@@ -320,8 +296,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userToLogin.adsWatchedToday = Number(userToLogin.adsWatchedToday) || 0;
     userToLogin.lastAdWatchDate = userToLogin.lastAdWatchDate || "";
     userToLogin.dailyCheckIns = Array.isArray(userToLogin.dailyCheckIns) ? userToLogin.dailyCheckIns.filter(d => typeof d === 'string') : [];
-    userToLogin.appLanguage = userToLogin.appLanguage || localStorage.getItem('appLanguage') || 'en-US';
-
 
     if (userToLogin.lastAdWatchDate !== today) {
         userToLogin.adsWatchedToday = 0;
@@ -343,11 +317,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         dailyCheckIns: userToLogin.dailyCheckIns,
         lastAdWatchDate: userToLogin.lastAdWatchDate === today ? today : userToLogin.lastAdWatchDate,
         lastStreakUpdate: userToLogin.lastStreakUpdate,
-        appLanguage: userToLogin.appLanguage,
     });
     
-    setAppLanguageState(userToLogin.appLanguage); // Sync global context state
-
     const { password, ...userForState } = userToLogin;
     setUser(userForState as User);
     setIsAuthenticated(true);
@@ -408,7 +379,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const requestWithdrawal = (amount: number): boolean => {
     if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-      // Placeholder for future API call for withdrawal
       console.log("Withdrawal request to API would be made here if API_BASE_URL was configured.");
     }
     if (!user) {
@@ -482,14 +452,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (updatedDetails.referralsMade !== undefined) updateData.referralsMade = Number(updatedDetails.referralsMade);
     if (updatedDetails.currentStreak !== undefined) updateData.currentStreak = Number(updatedDetails.currentStreak);
     if (updatedDetails.adsWatchedToday !== undefined) updateData.adsWatchedToday = Number(updatedDetails.adsWatchedToday);
-    if (updatedDetails.appLanguage) {
-      setAppLanguageState(updatedDetails.appLanguage); // Ensure context state matches
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('appLanguage', updatedDetails.appLanguage);
-      }
-    }
-
-
+    
     setUser(prevUser => prevUser ? { ...prevUser, ...updateData } : null);
     updateUserInStorage(user.id, updateData);
     return true;
@@ -515,7 +478,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
         photoURL: mockGoogleUserPhotoURL, claimedReferralTiers: [],
         currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0, lastAdWatchDate: "", dailyCheckIns: [],
-        appLanguage: appLanguage,
       };
       allUsers.push(googleUser);
       saveAllUsers(allUsers);
@@ -539,7 +501,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         googleUser.adsWatchedToday = Number(googleUser.adsWatchedToday) || 0;
         googleUser.lastAdWatchDate = googleUser.lastAdWatchDate || "";
         googleUser.dailyCheckIns = Array.isArray(googleUser.dailyCheckIns) ? googleUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
-        googleUser.appLanguage = googleUser.appLanguage || localStorage.getItem('appLanguage') || 'en-US';
         updateUserInStorage(googleUser.id, googleUser);
     }
     await login(googleUser.email, googleUser.password!);
@@ -548,7 +509,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getAllUsersForLeaderboard = (): User[] => {
     if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-      // Placeholder for future API call
       console.warn("Leaderboard is using local data. Configure API_BASE_URL for live data.");
     }
     const users = getAllUsers();
@@ -575,7 +535,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: Number(u.adsWatchedToday) || 0,
       lastAdWatchDate: u.lastAdWatchDate || "",
       dailyCheckIns: Array.isArray(u.dailyCheckIns) ? u.dailyCheckIns.filter(d => typeof d === 'string') : [],
-      appLanguage: u.appLanguage || localStorage.getItem('appLanguage') || 'en-US',
     }));
   };
 
@@ -654,8 +613,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signup, login, logout, addBalance, addCoins, spendCoins,
         requestWithdrawal, withdrawalHistory, applyReferral, updateUser,
         googleSignIn, getAllUsersForLeaderboard,
-        recordAdWatchAndCheckIn,
-        appLanguage, setAppLanguage
+        recordAdWatchAndCheckIn
     }}>
       {children}
     </AuthContext.Provider>
