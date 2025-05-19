@@ -42,7 +42,7 @@ interface User {
   adsWatchedToday: number;
   lastAdWatchDate: string;
   dailyCheckIns: string[];
-  appLanguage: string;
+  // appLanguage: string; // Removed appLanguage
 }
 
 export interface WithdrawalRequest {
@@ -60,7 +60,7 @@ interface AuthContextType {
   signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
-  addBalance: (amount: number) => void; // Note: this only affects 'balance', not 'coins'
+  addBalance: (amount: number) => void;
   addCoins: (amount: number) => boolean;
   spendCoins: (amount: number) => boolean;
   requestWithdrawal: (amount: number) => boolean;
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           loggedInUser.adsWatchedToday = Number(loggedInUser.adsWatchedToday) || 0;
           loggedInUser.lastAdWatchDate = loggedInUser.lastAdWatchDate || "";
           loggedInUser.dailyCheckIns = Array.isArray(loggedInUser.dailyCheckIns) ? loggedInUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
-          loggedInUser.appLanguage = loggedInUser.appLanguage || 'en-US';
+          // loggedInUser.appLanguage = loggedInUser.appLanguage || 'en-US'; // Removed appLanguage
 
 
           // Daily state updates
@@ -233,7 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: 0,
       lastAdWatchDate: "",
       dailyCheckIns: [],
-      appLanguage: 'en-US', // Default language
+      // appLanguage: 'en-US', // Removed appLanguage
     };
 
     if (referralCodeInput) {
@@ -305,7 +305,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userToLogin.adsWatchedToday = Number(userToLogin.adsWatchedToday) || 0;
     userToLogin.lastAdWatchDate = userToLogin.lastAdWatchDate || "";
     userToLogin.dailyCheckIns = Array.isArray(userToLogin.dailyCheckIns) ? userToLogin.dailyCheckIns.filter(d => typeof d === 'string') : [];
-    userToLogin.appLanguage = userToLogin.appLanguage || 'en-US';
+    // userToLogin.appLanguage = userToLogin.appLanguage || 'en-US'; // Removed appLanguage
 
 
     if (userToLogin.lastAdWatchDate !== today) {
@@ -487,7 +487,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
         photoURL: mockGoogleUserPhotoURL, claimedReferralTiers: [],
         currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0, lastAdWatchDate: "", dailyCheckIns: [],
-        appLanguage: 'en-US',
+        // appLanguage: 'en-US', // Removed appLanguage
       };
       allUsers.push(googleUser);
       saveAllUsers(allUsers);
@@ -511,7 +511,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         googleUser.adsWatchedToday = Number(googleUser.adsWatchedToday) || 0;
         googleUser.lastAdWatchDate = googleUser.lastAdWatchDate || "";
         googleUser.dailyCheckIns = Array.isArray(googleUser.dailyCheckIns) ? googleUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
-        googleUser.appLanguage = googleUser.appLanguage || 'en-US';
+        // googleUser.appLanguage = googleUser.appLanguage || 'en-US'; // Removed appLanguage
         updateUserInStorage(googleUser.id, googleUser);
     }
     await login(googleUser.email, googleUser.password!);
@@ -544,7 +544,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: Number(u.adsWatchedToday) || 0,
       lastAdWatchDate: u.lastAdWatchDate || "",
       dailyCheckIns: Array.isArray(u.dailyCheckIns) ? u.dailyCheckIns.filter(d => typeof d === 'string') : [],
-      appLanguage: u.appLanguage || 'en-US',
+      // appLanguage: u.appLanguage || 'en-US', // Removed appLanguage
     }));
   };
 

@@ -3,28 +3,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Wallet, Users, User, Home as HomeIcon } from 'lucide-react';
+import { Wallet, Users, User, Home as HomeIcon } from 'lucide-react'; // Added HomeIcon
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/auth-context'; // Import useAuth
-import { getTranslation } from '@/lib/translations'; // Import translation helper
+import { useAuth } from '@/context/auth-context';
 
 export function AppFooter() {
   const pathname = usePathname();
-  const { user } = useAuth(); // Get user to access appLanguage
+  const { user } = useAuth(); // Get user to potentially access other user-specific data if needed
 
   const navItems = [
-    { href: '/home', labelKey: 'navHome', icon: HomeIcon },
-    { href: '/wallet', labelKey: 'navWallet', icon: Wallet },
-    { href: '/referrals', labelKey: 'navReferrals', icon: Users },
-    { href: '/profile', labelKey: 'navProfile', icon: User },
+    { href: '/home', label: 'Home', icon: HomeIcon },
+    { href: '/wallet', label: 'Wallet', icon: Wallet },
+    { href: '/referrals', label: 'Referrals', icon: Users },
+    { href: '/profile', label: 'Profile', icon: User },
   ];
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav className="container mx-auto flex h-16 items-center justify-around px-2 md:px-6">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href === '/home' && pathname === '/'); // Adjusted for root path being home
-          const label = getTranslation(user?.appLanguage, item.labelKey);
+          const isActive = pathname === item.href || (item.href === '/' && pathname === '/'); // Main app page is '/'
+          const label = item.label; // Using direct label now
           return (
             <Link
               key={item.href}
