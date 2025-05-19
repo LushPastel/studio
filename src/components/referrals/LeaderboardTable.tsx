@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Coins, Hourglass } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/constants'; // Keep for potential future use or error message
+import { API_BASE_URL } from '@/lib/constants'; // Kept for consistency, though not used for API calls now
 
 interface UserForLeaderboard {
   id: string;
@@ -20,20 +20,19 @@ export function LeaderboardTable() {
   const { user: currentUser, getAllUsersForLeaderboard } = useAuth();
   const [leaderboardData, setLeaderboardData] = useState<UserForLeaderboard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null); // Keep for potential local errors
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
     setError(null);
     try {
-      // Reverted to fetching from localStorage via AuthContext
-      const allUsers = getAllUsersForLeaderboard();
+      const allUsers = getAllUsersForLeaderboard(); // Fetches from localStorage via AuthContext
       const sortedUsers = [...allUsers] // Create a copy before sorting
         .sort((a, b) => (b.coins || 0) - (a.coins || 0));
-      setLeaderboardData(sortedUsers.slice(0, 15));
+      setLeaderboardData(sortedUsers.slice(0, 15)); // Show top 15
     } catch (e: any) {
       console.error("Failed to load leaderboard from localStorage:", e);
-      setError("Could not load leaderboard data.");
+      setError("Could not load leaderboard data."); // Error for local data processing
       setLeaderboardData([]);
     } finally {
       setIsLoading(false);

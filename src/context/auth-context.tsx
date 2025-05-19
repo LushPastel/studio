@@ -27,7 +27,7 @@ interface User {
   coins: number;
   referralCode: string;
   referralsMade: number;
-  weeklyReferralsMade: number; 
+  weeklyReferralsMade: number;
   hasAppliedReferral?: boolean;
   hasRatedApp?: boolean;
   // Profile fields
@@ -37,7 +37,7 @@ interface User {
   contactDetail?: string;
   // Notification preferences
   notificationPreferences?: NotificationPreferences;
-  photoURL?: string; 
+  photoURL?: string;
 }
 
 export interface WithdrawalRequest {
@@ -56,15 +56,15 @@ interface AuthContextType {
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => boolean; // Changed back to synchronous
-  spendCoins: (amount: number) => boolean; // Changed back to synchronous
+  addCoins: (amount: number) => boolean;
+  spendCoins: (amount: number) => boolean;
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password' | 'balance' | 'referralCode' | 'coins'>>) => boolean;
   processWeeklyLeaderboardReset: () => void;
-  googleSignIn: () => Promise<void>; // Kept async for potential future changes
-  getAllUsersForLeaderboard: () => User[]; // Re-added for local leaderboard
+  googleSignIn: () => Promise<void>;
+  getAllUsersForLeaderboard: () => User[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = users.find(u => u.id === currentUserId);
         if (loggedInUser) {
           const { password, ...userWithoutPassword } = loggedInUser;
-          setUser({ 
+          setUser({
             coins: loggedInUser.coins || 0,
             hasRatedApp: loggedInUser.hasRatedApp || false,
             referralsMade: loggedInUser.referralsMade || 0,
@@ -128,9 +128,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               payments: true,
               updates: true,
             },
-            photoURL: loggedInUser.photoURL || undefined, 
+            photoURL: loggedInUser.photoURL || undefined,
             hasAppliedReferral: loggedInUser.hasAppliedReferral || false,
-            ...userWithoutPassword 
+            ...userWithoutPassword
           } as User);
           setIsAuthenticated(true);
           const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       id: `user-${Date.now()}`,
       email,
       name,
-      password: passwordInput, 
+      password: passwordInput,
       balance: 0,
       coins: 0,
       referralCode: generateReferralCode(),
@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         payments: true,
         updates: true,
       },
-      photoURL: undefined, 
+      photoURL: undefined,
     };
 
     let finalNewUser = { ...newUserBase };
@@ -187,18 +187,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (referralCodeInput) {
       const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === referralCodeInput.trim().toUpperCase() && u.id !== finalNewUser.id);
       if (referrerIndex !== -1) {
-        finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2)); // Referrer bonus is cash
+        finalNewUser.balance = parseFloat((finalNewUser.balance + REFERRAL_BONUS).toFixed(2));
+        finalNewUser.coins = (finalNewUser.coins || 0) + REFERRAL_BONUS; // Assuming referral bonus also gives coins
         finalNewUser.hasAppliedReferral = true;
-        toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
+        toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
 
-        allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)); // Referrer bonus is cash
+        allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
+        allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS;
         allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
-        allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1; // Still track weekly for potential future use
+        allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
       } else {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
     }
-    
+
     const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id), finalNewUser];
     saveAllUsers(updatedUsersArray);
 
@@ -229,7 +231,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { password, ...userToSet } = foundUser;
-     setUser({ 
+     setUser({
         coins: foundUser.coins || 0,
         hasRatedApp: foundUser.hasRatedApp || false,
         referralsMade: foundUser.referralsMade || 0,
@@ -246,7 +248,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
         photoURL: foundUser.photoURL || undefined,
         hasAppliedReferral: foundUser.hasAppliedReferral || false,
-        ...userToSet 
+        ...userToSet
       } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
@@ -303,7 +305,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (fullUserFromStorage) {
       updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
     }
-    // No API call here, reverted to localStorage only
     return true;
   };
 
@@ -319,7 +320,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (fullUserFromStorage) {
       updateUserInStorage(user.id, { ...fullUserFromStorage, coins: newCoins });
     }
-    // No API call here, reverted to localStorage only
     return true;
   };
 
@@ -383,10 +383,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Update applicant (current user)
-    const applicantNewBalance = parseFloat((user.balance + REFERRAL_BONUS).toFixed(2)); // Bonus is cash
+    const applicantNewBalance = parseFloat((user.balance + REFERRAL_BONUS).toFixed(2));
+    const applicantNewCoins = (user.coins || 0) + REFERRAL_BONUS; // Assuming referral bonus also gives coins
     const applicantWithBonusForState = {
         ...user,
         balance: applicantNewBalance,
+        coins: applicantNewCoins,
         hasAppliedReferral: true
     };
     setUser(applicantWithBonusForState);
@@ -396,18 +398,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateUserInStorage(user.id, {
             ...fullApplicantUserFromStorage,
             balance: applicantNewBalance,
+            coins: applicantNewCoins,
             hasAppliedReferral: true
         });
     }
 
     // Update referrer
-    allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2)); // Bonus is cash
+    allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
+    allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS; // Assuming referral bonus also gives coins
     allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
-    allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1; // Still track weekly
+    allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
 
     saveAllUsers(allUsers);
 
-    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus!` });
+    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
     return true;
   };
 
@@ -424,28 +428,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (fullUserFromStorage) {
          updateUserInStorage(user.id, { ...fullUserFromStorage, ...updatedDetails });
     }
-    
+
     return true;
   };
 
   const processWeeklyLeaderboardReset = () => {
-    // This function used to award coins, but now the leaderboard is global coins based
-    // and rewards were removed from this function.
-    // We can keep the weekly referral reset if desired, or make this a no-op for now.
+    // This function used to award coins based on weekly referrals.
+    // Now, it primarily resets weekly referral counts.
+    // The leaderboard itself is based on total coins.
     let allUsers = getAllUsers();
     allUsers.forEach(u => u.weeklyReferralsMade = 0);
     saveAllUsers(allUsers);
-    
+
     if(user && allUsers.find(u => u.id === user.id)) {
       setUser(prevUser => prevUser ? {...prevUser, weeklyReferralsMade: 0} : null);
     }
-    toast({ title: "Weekly Referrals Reset", description: "Weekly referral counts have been reset." });
+    // Consider if a toast is still needed here or if this reset is silent.
+    // toast({ title: "Weekly Referrals Reset", description: "Weekly referral counts have been reset." });
   };
 
-  const googleSignIn = async (): Promise<void> => { 
+  const googleSignIn = async (): Promise<void> => {
     const mockGoogleUserEmail = "google.user@example.com";
     const mockGoogleUserName = "Google User";
-    const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G"; 
+    const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G";
 
     let allUsers = getAllUsers();
     let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
@@ -455,7 +460,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword", 
+        password: "mockpassword",
         balance: 0,
         coins: 0,
         referralCode: generateReferralCode(),
@@ -475,7 +480,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
         photoURL: mockGoogleUserPhotoURL,
       };
-      
+
       allUsers.push(newGoogleUserBase);
       saveAllUsers(allUsers);
       googleUser = newGoogleUserBase;
@@ -486,9 +491,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             updateUserInStorage(googleUser.id, { photoURL: mockGoogleUserPhotoURL });
         }
     }
-    
+
     const { password, ...userToSet } = googleUser;
-     setUser({ 
+     setUser({
         coins: googleUser.coins || 0,
         hasRatedApp: googleUser.hasRatedApp || false,
         referralsMade: googleUser.referralsMade || 0,
@@ -504,7 +509,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           updates: true,
         },
         hasAppliedReferral: googleUser.hasAppliedReferral || false,
-        ...userToSet 
+        ...userToSet
       } as User);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
@@ -514,9 +519,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     toast({ title: "Signed in with Google (Simulated)", description: `Welcome, ${googleUser.name}!` });
-    // Use Next.js router for navigation if available, otherwise fallback
     if (typeof window !== 'undefined') {
-      window.location.href = '/home'; 
+      window.location.href = '/home';
     }
   };
 
