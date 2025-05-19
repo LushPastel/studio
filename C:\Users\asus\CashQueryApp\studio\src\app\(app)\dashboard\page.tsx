@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Hourglass, Tv2, Coins, CheckCircle, X } from 'lucide-react'; // Added X
+import { ArrowLeft, Hourglass, Tv2, Coins, CheckCircle, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Image from 'next/image';
 import Link from 'next/link';
 import { AD_REWARDS_TIERED, MAX_ADS_PER_DAY, AD_DURATION_SECONDS } from '@/lib/constants';
-import { format, parseISO, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, isPast } from 'date-fns'; // Added new date-fns imports
+import { format, parseISO, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, isPast } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const DayIndicator = ({ date, isCheckedIn, isPastAndMissed }: { date: Date; isCheckedIn: boolean; isPastAndMissed: boolean }) => {
@@ -62,12 +62,13 @@ export default function DailyStreakPage() {
             return 100;
           }
           // Calculate increment based on total duration and number of steps
-          return prev + (100 / (AD_DURATION_SECONDS * 1000 / interval));
+          // Ensures progress reaches 100 in AD_DURATION_SECONDS
+          return prev + (100 / (AD_DURATION_SECONDS * (1000 / interval))); 
         });
       }, interval);
     }
     return () => clearInterval(timer);
-  }, [isAdModalOpen, isAdWatchedInModal]);
+  }, [isAdModalOpen, isAdWatchedInModal, AD_DURATION_SECONDS]);
 
 
   if (isLoadingAuth || !user) {
@@ -94,8 +95,15 @@ export default function DailyStreakPage() {
   const today = new Date();
   const monday = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
   const sunday = endOfWeek(today, { weekStartsOn: 1 });
-  const currentWeekDays = eachDayOfInterval({ start: monday, end: sunday });
-  const userCheckIns = user.dailyCheckIns.map(dateStr => parseISO(dateStr));
+  const currentWeekDays = eachDayOfInterval({ start: monday, end: sunday }); // This generates [Mon, Tue, ..., Sun]
+  
+  const userCheckIns = user.dailyCheckIns.map(dateStr => {
+    try {
+      return parseISO(dateStr);
+    } catch (e) {
+      return null; // Handle invalid date strings gracefully
+    }
+  }).filter(date => date !== null) as Date[];
 
 
   return (
@@ -164,10 +172,10 @@ export default function DailyStreakPage() {
       </Card>
 
       <Dialog open={isAdModalOpen} onOpenChange={(open) => {
-         if (!open && !isAdWatchedInModal) { // If dialog is closed before ad finishes
-            setIsAdModalOpen(false); // Ensure it closes
-          } else if (!open && isAdWatchedInModal) { // If closed after ad finished (e.g. by clicking outside)
-            handleClaimRewardAndCheckIn(); // Still claim reward
+         if (!open && !isAdWatchedInModal) { 
+            setIsAdModalOpen(false); 
+          } else if (!open && isAdWatchedInModal) { 
+            handleClaimRewardAndCheckIn(); 
           }
       }}>
         <DialogContent className="sm:max-w-[425px] bg-card border-primary/50">
@@ -191,7 +199,7 @@ export default function DailyStreakPage() {
                 </div>
                 <Progress value={adProgress} className="w-full [&>div]:bg-primary" />
                 <p className="text-center text-sm text-muted-foreground">
-                  Time remaining: {Math.max(0, AD_DURATION_SECONDS - Math.floor(adProgress / (100/AD_DURATION_SECONDS)))}s
+                  Time remaining: {Math.max(0, AD_DURATION_SECONDS - Math.floor(adProgress / (100/(AD_DURATION_SECONDS * (1000 / (AD_DURATION_SECONDS * 10)))) )) }s
                 </p>
               </>
             )}
