@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, Hourglass, Tv2, Coins, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Hourglass, Tv2, Coins, CheckCircle, X } from 'lucide-react'; // Added X
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -12,18 +12,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Image from 'next/image';
 import Link from 'next/link';
 import { AD_REWARDS_TIERED, MAX_ADS_PER_DAY, AD_DURATION_SECONDS } from '@/lib/constants';
-import { format, subDays, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, isPast } from 'date-fns'; // Added new date-fns imports
 import { cn } from '@/lib/utils';
 
-const DayIndicator = ({ date, isCheckedIn }: { date: Date; isCheckedIn: boolean }) => {
+const DayIndicator = ({ date, isCheckedIn, isPastAndMissed }: { date: Date; isCheckedIn: boolean; isPastAndMissed: boolean }) => {
   return (
     <div className="flex flex-col items-center">
       <span className="text-xs text-muted-foreground">{format(date, 'EEE')}</span>
       <div className={cn(
         "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 mt-1",
-        isCheckedIn ? "bg-green-500 border-green-600" : "bg-muted border-border"
+        isCheckedIn ? "bg-green-500 border-green-600" : 
+        isPastAndMissed ? "bg-destructive border-destructive" : 
+        "bg-muted border-border"
       )}>
         {isCheckedIn && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
+        {isPastAndMissed && <X className="w-4 h-4 sm:w-5 sm:h-5 text-destructive-foreground" />}
       </div>
       <span className="text-xs text-muted-foreground mt-0.5">{format(date, 'd')}</span>
     </div>
@@ -89,8 +92,9 @@ export default function DailyStreakPage() {
   };
 
   const today = new Date();
-  // Corrected logic for lastSevenDays to be in chronological order
-  const lastSevenDays = Array.from({ length: 7 }, (_, i) => subDays(today, 6 - i));
+  const monday = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
+  const sunday = endOfWeek(today, { weekStartsOn: 1 });
+  const currentWeekDays = eachDayOfInterval({ start: monday, end: sunday });
   const userCheckIns = user.dailyCheckIns.map(dateStr => parseISO(dateStr));
 
 
@@ -113,13 +117,18 @@ export default function DailyStreakPage() {
       <Card className="mx-2 sm:mx-4 shadow-md">
         <CardContent className="p-4">
           <div className="flex justify-around">
-            {lastSevenDays.map((day) => (
-              <DayIndicator 
-                key={day.toISOString()} 
-                date={day} 
-                isCheckedIn={userCheckIns.some(checkInDate => isSameDay(checkInDate, day))}
-              />
-            ))}
+            {currentWeekDays.map((day) => {
+              const isCheckedIn = userCheckIns.some(checkInDate => isSameDay(checkInDate, day));
+              const isPastAndMissed = isPast(day) && !isSameDay(day, today) && !isCheckedIn;
+              return (
+                <DayIndicator 
+                  key={day.toISOString()} 
+                  date={day} 
+                  isCheckedIn={isCheckedIn}
+                  isPastAndMissed={isPastAndMissed}
+                />
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -204,5 +213,3 @@ export default function DailyStreakPage() {
     </div>
   );
 }
-
-    
