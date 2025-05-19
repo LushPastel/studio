@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Coins, Hourglass } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/constants'; // Used to check if we are in mock mode
 
 interface UserForLeaderboard {
   id: string;
@@ -16,7 +17,7 @@ interface UserForLeaderboard {
 }
 
 export function LeaderboardTable() {
-  const { user: currentUser, getAllUsersForLeaderboard } = useAuth();
+  const { user: currentUser, getAllUsersForLeaderboard } = useAuth(); // Use local data source
   const [leaderboardData, setLeaderboardData] = useState<UserForLeaderboard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,27 +25,43 @@ export function LeaderboardTable() {
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    try {
-      const allUsers = getAllUsersForLeaderboard();
-      
-      const sortedUsers = [...allUsers] 
-        .sort((a, b) => (b.coins || 0) - (a.coins || 0))
-        .slice(0, 15) // Get top 15 users
-        .map(u => ({ // Ensure correct structure for UserForLeaderboard
-          id: u.id,
-          name: u.name || "Unnamed User",
-          coins: u.coins || 0,
-          photoURL: u.photoURL
-        }));
 
-      setLeaderboardData(sortedUsers);
-    } catch (e: any) {
-      console.error("Failed to load leaderboard from localStorage:", e);
-      setError("Could not load leaderboard data.");
-      setLeaderboardData([]);
-    } finally {
+    // Using localStorage via AuthContext as per current directive
+    if (API_BASE_URL === "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+      try {
+        const allUsers = getAllUsersForLeaderboard(); // From AuthContext
+        
+        const sortedUsers = [...allUsers]
+          .sort((a, b) => (b.coins || 0) - (a.coins || 0))
+          .slice(0, 15)
+          .map(u => ({
+            id: u.id,
+            name: u.name || "Unnamed User",
+            coins: u.coins || 0,
+            photoURL: u.photoURL,
+          }));
+
+        setLeaderboardData(sortedUsers);
+      } catch (e: any) {
+        console.error("Failed to load leaderboard from localStorage:", e);
+        setError("Could not load leaderboard data from local storage.");
+        setLeaderboardData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Placeholder for when API_BASE_URL is configured for a live backend
+      // This block would be used if we were making a real API call.
+      // For now, it indicates that the system is set up for local data.
+      console.warn("Leaderboard is in local mode. API_BASE_URL is not configured for a live backend.");
+      setError("Leaderboard is in local/mock mode. Configure API_BASE_URL for live data.");
       setIsLoading(false);
+      // Optionally, still load from local storage as a fallback:
+      // const allUsers = getAllUsersForLeaderboard();
+      // const sortedUsers = ...
+      // setLeaderboardData(sortedUsers);
     }
+
   }, [getAllUsersForLeaderboard, currentUser]); 
 
   if (isLoading) {
@@ -60,12 +77,12 @@ export function LeaderboardTable() {
     return (
       <div className="text-center py-10 text-destructive">
         <Trophy className="mx-auto h-12 w-12 mb-4" />
-        <p className="font-semibold">Error loading leaderboard:</p>
+        <p className="font-semibold">Leaderboard Information:</p>
         <p>{error}</p>
       </div>
     );
   }
-
+  
   if (leaderboardData.length === 0) {
     return (
       <div className="text-center py-10">

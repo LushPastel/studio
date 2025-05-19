@@ -4,8 +4,8 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME, MAX_ADS_PER_DAY, AD_REWARDS_TIERED } from '@/lib/constants';
-import { format, subDays, parseISO, isValid } from 'date-fns';
+import { API_BASE_URL, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME, MAX_ADS_PER_DAY, AD_REWARDS_TIERED } from '@/lib/constants';
+import { format, subDays, parseISO, isValid, isSameDay } from 'date-fns';
 
 // Constants for localStorage keys
 const LS_USERS_KEY = 'cashquery-users';
@@ -23,11 +23,12 @@ interface User {
   id: string;
   email: string;
   name: string;
-  password?: string;
+  password?: string; // Only stored in LS for this prototype, NOT secure for production
   balance: number;
   coins: number;
   referralCode: string;
   referralsMade: number;
+  weeklyReferralsMade: number; // For simulated weekly leaderboard
   hasAppliedReferral?: boolean;
   hasRatedApp?: boolean;
   gender?: 'Not Specified' | 'Male' | 'Female' | 'Other';
@@ -61,20 +62,21 @@ interface AuthContextType {
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => boolean;
-  spendCoins: (amount: number) => boolean;
+  addCoins: (amount: number) => boolean; // Operates on localStorage
+  spendCoins: (amount: number) => boolean; // Operates on localStorage
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password'>>) => boolean;
-  googleSignIn: () => Promise<void>;
-  getAllUsersForLeaderboard: () => User[];
-  recordAdWatchAndCheckIn: () => Promise<boolean>; // Returns true if ad watched successfully
+  googleSignIn: () => Promise<void>; // Simulates Google Sign-In
+  getAllUsersForLeaderboard: () => User[]; // Reads from localStorage
+  processWeeklyLeaderboardReset: () => void; // Simulates weekly reset, uses localStorage
+  recordAdWatchAndCheckIn: () => Promise<boolean>; // For daily streak, uses localStorage
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const generateReferralCode = () => `${APP_NAME.toUpperCase()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+const generateReferralCode = () => `${APP_NAME.toUpperCase().substring(0,4)}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 const todayISOString = () => format(new Date(), 'yyyy-MM-dd');
 const yesterdayISOString = () => format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
@@ -126,34 +128,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           loggedInUser.adsWatchedToday = loggedInUser.adsWatchedToday || 0;
           loggedInUser.lastAdWatchDate = loggedInUser.lastAdWatchDate || "";
           loggedInUser.dailyCheckIns = Array.isArray(loggedInUser.dailyCheckIns) ? loggedInUser.dailyCheckIns : [];
+          loggedInUser.weeklyReferralsMade = loggedInUser.weeklyReferralsMade || 0;
 
 
           // Daily state updates
           if (loggedInUser.lastAdWatchDate !== today) {
             loggedInUser.adsWatchedToday = 0;
-            // Don't update lastAdWatchDate here, recordAdWatchAndCheckIn will do it
           }
           if (loggedInUser.lastStreakUpdate !== today && loggedInUser.lastStreakUpdate !== yesterday) {
             loggedInUser.currentStreak = 0;
           }
-           // Prune dailyCheckIns to last 7 valid dates
           loggedInUser.dailyCheckIns = loggedInUser.dailyCheckIns
             .map(dateStr => {
-              try {
-                return isValid(parseISO(dateStr)) ? dateStr : null;
-              } catch { return null; }
+              try { return isValid(parseISO(dateStr)) ? dateStr : null; } catch { return null; }
             })
             .filter(dateStr => dateStr !== null)
-            .sort((a, b) => b!.localeCompare(a!)) // Sort newest first
+            .sort((a, b) => b!.localeCompare(a!)) 
             .slice(0, 7) as string[];
 
 
           const { password, ...userWithoutPassword } = loggedInUser;
           setUser({
-            ...userWithoutPassword, // existing fields
+            ...userWithoutPassword, 
             coins: loggedInUser.coins || 0,
             hasRatedApp: loggedInUser.hasRatedApp || false,
             referralsMade: loggedInUser.referralsMade || 0,
+            weeklyReferralsMade: loggedInUser.weeklyReferralsMade || 0,
             gender: loggedInUser.gender || 'Not Specified',
             ageRange: loggedInUser.ageRange || 'Prefer not to say',
             contactMethod: loggedInUser.contactMethod || 'WhatsApp',
@@ -164,7 +164,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             photoURL: loggedInUser.photoURL || undefined,
             hasAppliedReferral: loggedInUser.hasAppliedReferral || false,
             claimedReferralTiers: loggedInUser.claimedReferralTiers || [],
-            // New fields
             currentStreak: loggedInUser.currentStreak,
             lastStreakUpdate: loggedInUser.lastStreakUpdate,
             adsWatchedToday: loggedInUser.adsWatchedToday,
@@ -195,14 +194,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return users.find(u => u.id === userId);
   };
 
-  const updateUserInStorage = (userId: string, updatedDetails: Partial<User>) => {
+  const updateUserInStorage = (userId: string, updatedDetails: Partial<User>): User | undefined => {
     let users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
       users[userIndex] = { ...users[userIndex], ...updatedDetails };
       saveAllUsers(users);
+      return users[userIndex];
     }
-    return users[userIndex];
+    return undefined;
   };
 
   const signup = async (name: string, email: string, passwordInput: string, referralCodeInput?: string): Promise<boolean> => {
@@ -211,7 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Signup Failed", description: "Email already registered. Please log in." });
       return false;
     }
-    const today = todayISOString();
+
     const newUserBase: User = {
       id: `user-${Date.now()}`,
       email,
@@ -221,6 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       coins: 0,
       referralCode: generateReferralCode(),
       referralsMade: 0,
+      weeklyReferralsMade: 0,
       hasAppliedReferral: false,
       hasRatedApp: false,
       gender: 'Not Specified',
@@ -231,9 +232,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       photoURL: undefined,
       claimedReferralTiers: [],
       currentStreak: 0,
-      lastStreakUpdate: "", // Set to today on first check-in
+      lastStreakUpdate: "", 
       adsWatchedToday: 0,
-      lastAdWatchDate: "", // Set to today on first ad watch
+      lastAdWatchDate: "", 
       dailyCheckIns: [],
     };
 
@@ -250,14 +251,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
         allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS;
         allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
+        allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
       } else {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
     }
-
+    
     const updatedUsersArray = [...allUsers.filter(u => u.id !== finalNewUser.id && u.email.toLowerCase() !== finalNewUser.email.toLowerCase()), finalNewUser];
     saveAllUsers(updatedUsersArray);
-
+    
     const { password, ...userToSet } = finalNewUser;
     setUser(userToSet as User);
     setIsAuthenticated(true);
@@ -287,14 +289,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const yesterday = yesterdayISOString();
     let userToSet = { ...foundUser };
 
-    // Initialize new fields if missing for older users
     userToSet.currentStreak = userToSet.currentStreak || 0;
     userToSet.lastStreakUpdate = userToSet.lastStreakUpdate || "";
     userToSet.adsWatchedToday = userToSet.adsWatchedToday || 0;
     userToSet.lastAdWatchDate = userToSet.lastAdWatchDate || "";
     userToSet.dailyCheckIns = Array.isArray(userToSet.dailyCheckIns) ? userToSet.dailyCheckIns : [];
+    userToSet.weeklyReferralsMade = userToSet.weeklyReferralsMade || 0;
 
-    // Daily state updates on login
+
     if (userToSet.lastAdWatchDate !== today) {
         userToSet.adsWatchedToday = 0;
     }
@@ -306,10 +308,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             try { return isValid(parseISO(dateStr)) ? dateStr : null; } catch { return null; }
         })
         .filter(dateStr => dateStr !== null)
-        .sort((a, b) => b!.localeCompare(a!))
+        .sort((a,b) => b!.localeCompare(a!))
         .slice(0, 7) as string[];
 
-    // Update storage immediately with potentially cleaned/reset daily data
     updateUserInStorage(userToSet.id, { 
         adsWatchedToday: userToSet.adsWatchedToday, 
         currentStreak: userToSet.currentStreak,
@@ -346,6 +347,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateUserInStorage(user.id, { balance: newBalance });
   };
 
+  // Operates on localStorage
   const addCoins = (amount: number): boolean => {
     if (!user) return false;
     const newCoins = (user.coins || 0) + amount;
@@ -355,6 +357,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
+  // Operates on localStorage
   const spendCoins = (amount: number): boolean => {
     if (!user || (user.coins || 0) < amount) {
       toast({ variant: "destructive", title: "Not enough coins", description: "You don't have enough coins for this action." });
@@ -420,7 +423,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     allUsers[referrerIndex].balance = parseFloat((allUsers[referrerIndex].balance + REFERRAL_BONUS).toFixed(2));
     allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS;
     allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
-    saveAllUsers(allUsers);
+    allUsers[referrerIndex].weeklyReferralsMade = (allUsers[referrerIndex].weeklyReferralsMade || 0) + 1;
+    saveAllUsers(allUsers); // Save changes for the referrer
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
     return true;
   };
@@ -433,17 +437,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const updatedUserForState = { ...user, ...updatedDetails };
     setUser(updatedUserForState);
     updateUserInStorage(user.id, updatedDetails);
-    // toast({title: "Profile Updated", description: "Your changes have been saved."}); // Toast moved to form
     return true;
   };
 
   const googleSignIn = async (): Promise<void> => {
-    // ... (googleSignIn logic remains the same but ensures new fields are initialized)
     const mockGoogleUserEmail = "google.user@example.com";
     const mockGoogleUserName = "Google User";
     const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G";
-    const today = todayISOString();
-
+    
     let allUsers = getAllUsers();
     let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
 
@@ -452,8 +453,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword",
-        balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0,
+        password: "mockpassword", // For prototype login flow
+        balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0, weeklyReferralsMade: 0,
         hasAppliedReferral: false, hasRatedApp: false, gender: 'Not Specified',
         ageRange: 'Prefer not to say', contactMethod: 'WhatsApp', contactDetail: '',
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
@@ -466,24 +467,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!googleUser.photoURL || googleUser.photoURL !== mockGoogleUserPhotoURL) {
             googleUser.photoURL = mockGoogleUserPhotoURL;
         }
-        // Initialize new fields if missing for existing Google user
         googleUser.currentStreak = googleUser.currentStreak || 0;
         googleUser.lastStreakUpdate = googleUser.lastStreakUpdate || "";
         googleUser.adsWatchedToday = googleUser.adsWatchedToday || 0;
         googleUser.lastAdWatchDate = googleUser.lastAdWatchDate || "";
         googleUser.dailyCheckIns = Array.isArray(googleUser.dailyCheckIns) ? googleUser.dailyCheckIns : [];
-        updateUserInStorage(googleUser.id, googleUser);
+        googleUser.weeklyReferralsMade = googleUser.weeklyReferralsMade || 0;
+        updateUserInStorage(googleUser.id, googleUser); // Ensure any missing fields are saved
     }
-    login(googleUser.email, googleUser.password!); // Use existing login for full setup
+    await login(googleUser.email, googleUser.password!); 
+    toast({ title: "Signed in with Google (Simulated)" });
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
     const users = getAllUsers();
     return users.map(u => ({
       ...u,
-      coins: u.coins || 0, // Ensure coins is a number
-      name: u.name || "Unnamed User", // Ensure name exists
+      coins: u.coins || 0, 
+      name: u.name || "Unnamed User", 
+      weeklyReferralsMade: u.weeklyReferralsMade || 0,
     }));
+  };
+
+  const processWeeklyLeaderboardReset = (): void => {
+    let allUsers = getAllUsers();
+    // Sort by weeklyReferralsMade for awarding, but this logic is now removed.
+    // The leaderboard itself ranks by total coins.
+    // This function will now only reset weeklyReferralsMade for all users.
+
+    allUsers.forEach(u => {
+      u.weeklyReferralsMade = 0;
+    });
+    saveAllUsers(allUsers);
+
+    // Update current user state if logged in
+    if (user) {
+      const updatedCurrentUser = allUsers.find(u => u.id === user.id);
+      if (updatedCurrentUser) {
+        const { password, ...userToSet } = updatedCurrentUser;
+        setUser(userToSet as User);
+      }
+    }
+    toast({ title: "Weekly Referrals Reset", description: "Weekly referral counts have been reset for all users." });
   };
 
   const recordAdWatchAndCheckIn = async (): Promise<boolean> => {
@@ -492,11 +517,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    let mutableUser = { ...user }; // Work with a mutable copy for this operation
+    let mutableUser = { ...user }; 
     const today = todayISOString();
     const yesterday = yesterdayISOString();
 
-    // Reset adsWatchedToday if it's a new day for ad watching
     if (mutableUser.lastAdWatchDate !== today) {
       mutableUser.adsWatchedToday = 0;
       mutableUser.lastAdWatchDate = today;
@@ -507,31 +531,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    const reward = AD_REWARDS_TIERED[mutableUser.adsWatchedToday];
+    const rewardIndex = mutableUser.adsWatchedToday;
+    const reward = AD_REWARDS_TIERED[rewardIndex < AD_REWARDS_TIERED.length ? rewardIndex : AD_REWARDS_TIERED.length -1]; // Ensure valid index
+    
     addCoins(reward); // This will update user state and localStorage for coins
 
     mutableUser.adsWatchedToday += 1;
 
-    // Streak Logic
-    if (mutableUser.lastStreakUpdate !== today) { // Only update streak if not already updated today
+    let hasCheckedInToday = mutableUser.dailyCheckIns.some(dateStr => isSameDay(parseISO(dateStr), new Date()));
+
+    if (!hasCheckedInToday) { // Only update streak if not already checked in today
       if (mutableUser.lastStreakUpdate === yesterday) {
         mutableUser.currentStreak += 1;
-      } else {
-        mutableUser.currentStreak = 1; // New or broken streak
+      } else if (mutableUser.lastStreakUpdate !== today) { // Avoid double increment if already updated
+        mutableUser.currentStreak = 1; 
       }
       mutableUser.lastStreakUpdate = today;
 
-      // Update dailyCheckIns
       let newCheckIns = [today, ...mutableUser.dailyCheckIns.filter(d => d !== today)];
-      newCheckIns = Array.from(new Set(newCheckIns)) // Ensure uniqueness
-                         .sort((a,b) => b.localeCompare(a)) // Sort newest first
-                         .slice(0, 7); // Keep last 7
+      newCheckIns = Array.from(new Set(newCheckIns)) 
+                         .sort((a,b) => b.localeCompare(a)) 
+                         .slice(0, 7); 
       mutableUser.dailyCheckIns = newCheckIns;
     }
     
-    // Update user state with all changes from this operation
     setUser(mutableUser);
-    // Save the comprehensive update to localStorage
     updateUserInStorage(mutableUser.id, {
       adsWatchedToday: mutableUser.adsWatchedToday,
       lastAdWatchDate: mutableUser.lastAdWatchDate,
@@ -550,7 +574,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user, isAuthenticated, isLoadingAuth,
         signup, login, logout, addBalance, addCoins, spendCoins,
         requestWithdrawal, withdrawalHistory, applyReferral, updateUser,
-        googleSignIn, getAllUsersForLeaderboard, recordAdWatchAndCheckIn
+        googleSignIn, getAllUsersForLeaderboard, processWeeklyLeaderboardReset,
+        recordAdWatchAndCheckIn
     }}>
       {children}
     </AuthContext.Provider>
@@ -564,5 +589,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
