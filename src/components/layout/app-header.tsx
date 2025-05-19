@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { Coins } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
-import { APP_NAME } from '@/lib/constants';
+// import { APP_NAME } from '@/lib/constants'; // APP_NAME will now come from translations
+import { useTranslation } from 'react-i18next';
 
 export function AppHeader() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const { t } = useTranslation();
+  const appName = t('appName');
 
   const showMinimalHeader = isLoadingAuth || (!isAuthenticated && user === null);
 
@@ -25,7 +28,7 @@ export function AppHeader() {
           >
             <Coins className="h-7 w-7" />
             <span className="font-bold text-xl tracking-tighter sm:inline-block">
-              {APP_NAME}
+              {appName}
             </span>
           </Link>
         </div>
@@ -46,7 +49,7 @@ export function AppHeader() {
         >
           <Coins className="h-7 w-7" />
           <span className="font-bold text-xl tracking-tighter sm:inline-block">
-            {APP_NAME}
+            {appName}
           </span>
         </Link>
 

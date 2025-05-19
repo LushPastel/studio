@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { Hourglass, UserCog, BellRing, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound } from 'lucide-react';
+import { Hourglass, UserCog, BellRing, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, KeyRound, Languages } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -133,7 +133,8 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={BellRing} text="Notification Settings" href="/profile/notification-settings" />
         <Separator />
-        {/* App Language item removed */}
+        <ProfileListItem icon={Languages} text="App Language" href="/profile/language" />
+        <Separator />
         <ProfileListItem icon={History} text="Reward History" href="/wallet" />
         <Separator />
         <ProfileListItem icon={HelpCircle} text="Get Help" onClick={() => toast({ title: "Coming Soon", description: "Help & Support section will be available soon."})} />

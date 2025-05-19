@@ -1,0 +1,18 @@
+{
+  "appName": "कैशक्वेरी",
+  "nav_home": "होम",
+  "nav_wallet": "वॉलेट",
+  "nav_referrals": "रेफरल",
+  "nav_profile": "प्रोफ़ाइल",
+  "language_settings_title": "ऐप भाषा",
+  "language_english_us": "अंग्रेजी (यूएस)",
+  "language_spanish_es": "स्पेनिश (स्पेन)",
+  "language_chinese_cn": "चीनी (सरलीकृत)",
+  "language_hindi_in": "हिन्दी (भारत)",
+  "language_arabic_sa": "अरबी (सऊदी अरब)",
+  "country_us": "संयुक्त राज्य अमेरिका",
+  "country_es": "स्पेन",
+  "country_cn": "चीन",
+  "country_in": "भारत",
+  "country_sa": "सऊदी अरब"
+}

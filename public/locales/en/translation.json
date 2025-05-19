@@ -1,0 +1,18 @@
+{
+  "appName": "CashQuery",
+  "nav_home": "Home",
+  "nav_wallet": "Wallet",
+  "nav_referrals": "Referrals",
+  "nav_profile": "Profile",
+  "language_settings_title": "App Language",
+  "language_english_us": "English (US)",
+  "language_spanish_es": "Spanish (Spain)",
+  "language_chinese_cn": "Chinese (Simplified)",
+  "language_hindi_in": "Hindi (India)",
+  "language_arabic_sa": "Arabic (Saudi Arabia)",
+  "country_us": "United States",
+  "country_es": "Spain",
+  "country_cn": "China",
+  "country_in": "India",
+  "country_sa": "Saudi Arabia"
+}
