@@ -56,7 +56,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
-  signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
+  signup: (name: string, email: string, passwordInput: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   };
 
-  const signup = async (name: string, email: string, passwordInput: string, referralCodeInput?: string): Promise<boolean> => {
+  const signup = async (name: string, email: string, passwordInput: string): Promise<boolean> => {
     let allUsers = getAllUsers();
     if (allUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
       toast({ variant: "destructive", title: "Signup Failed", description: "Email already registered. Please log in." });
@@ -212,7 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       coins: 0,
       referralCode: generateReferralCode(),
       referralsMade: 0,
-      hasAppliedReferral: false,
+      hasAppliedReferral: false, // No referral code applied at signup by default now
       hasRatedApp: false,
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
@@ -227,23 +227,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastAdWatchDate: "",
       dailyCheckIns: [],
     };
-
-    if (referralCodeInput) {
-      const codeToCompare = referralCodeInput.trim().toUpperCase();
-      const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === codeToCompare && u.id !== newUser.id);
-      if (referrerIndex !== -1) {
-        newUser.balance = parseFloat((newUser.balance + REFERRAL_BONUS).toFixed(2));
-        newUser.coins = (newUser.coins || 0) + REFERRAL_BONUS;
-        newUser.hasAppliedReferral = true;
-        toast({ title: "Referral Bonus Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
-
-        allUsers[referrerIndex].balance = parseFloat(((allUsers[referrerIndex].balance || 0) + REFERRAL_BONUS).toFixed(2));
-        allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS;
-        allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
-      } else {
-        toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
-      }
-    }
 
     allUsers.push(newUser);
     saveAllUsers(allUsers);
@@ -379,7 +362,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const requestWithdrawal = (amount: number): boolean => {
     if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-      console.log("Withdrawal request to API would be made here if API_BASE_URL was configured.");
+      // console.log("Withdrawal request would be made here if API_BASE_URL was configured.");
     }
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
@@ -471,7 +454,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword",
+        password: "mockpassword", // Required for login flow
         balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0,
         hasAppliedReferral: false, hasRatedApp: false, gender: 'Not Specified',
         ageRange: 'Prefer not to say', contactMethod: 'WhatsApp', contactDetail: '',
@@ -482,7 +465,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       allUsers.push(googleUser);
       saveAllUsers(allUsers);
     } else {
+        // Ensure all fields are present for existing Google user
         googleUser.photoURL = googleUser.photoURL || mockGoogleUserPhotoURL;
+        googleUser.password = googleUser.password || "mockpassword";
         googleUser.balance = Number(googleUser.balance) || 0;
         googleUser.coins = Number(googleUser.coins) || 0;
         googleUser.referralsMade = Number(googleUser.referralsMade) || 0;
@@ -503,14 +488,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         googleUser.dailyCheckIns = Array.isArray(googleUser.dailyCheckIns) ? googleUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
         updateUserInStorage(googleUser.id, googleUser);
     }
+    // Use the existing login function which also handles streak/ad updates
     await login(googleUser.email, googleUser.password!);
     toast({ title: "Signed in with Google (Simulated)" });
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
-    if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-      console.warn("Leaderboard is using local data. Configure API_BASE_URL for live data.");
-    }
+    // This function now directly calls getAllUsers from localStorage.
+    // The LeaderboardTable will use this.
     const users = getAllUsers();
     return users.map(u => ({
       id: u.id,
