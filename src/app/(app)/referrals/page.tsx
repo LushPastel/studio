@@ -3,12 +3,11 @@
 
 import { ReferralCodeCard } from '@/components/referrals/referral-code-card';
 import { ApplyReferralCard } from '@/components/referrals/apply-referral-card';
-import { LeaderboardTable } from '@/components/referrals/LeaderboardTable';
+import { ReferralRewardsTabContent } from '@/components/referrals/ReferralRewardsTabContent'; // New import
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Hourglass } from 'lucide-react';
-import { REFERRAL_BONUS } from '@/lib/constants';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -35,23 +34,23 @@ export default function ReferralsPage() {
     <div className="space-y-8">
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-foreground">
-          Referrals
+          Refer & Earn
         </h2>
         <p className="text-muted-foreground">
-          Invite friends or view the leaderboard.
+          Invite friends and earn rewards based on milestones.
         </p>
       </div>
 
-      <Tabs defaultValue="refer" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="refer">Refer & Earn</TabsTrigger>
-          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+      <Tabs defaultValue="invite" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-card border border-border">
+          <TabsTrigger value="invite" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Invite</TabsTrigger>
+          <TabsTrigger value="rewards" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Rewards</TabsTrigger>
         </TabsList>
-        <TabsContent value="refer">
+        <TabsContent value="invite">
           <Card className="border-border shadow-sm mt-4">
             <CardContent className="p-6 space-y-6">
                <p className="text-muted-foreground text-center">
-                Invite your friends to AdPlay. When they sign up using your code, you both get a bonus of ₹{REFERRAL_BONUS.toFixed(2)}!
+                Share your referral code with friends. When they sign up, you both get a bonus!
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <ReferralCodeCard />
@@ -60,16 +59,10 @@ export default function ReferralsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="leaderboard">
-          <Card className="border-border shadow-sm mt-4">
-            <CardContent className="p-6">
-              <LeaderboardTable />
-            </CardContent>
-          </Card>
+        <TabsContent value="rewards">
+           <ReferralRewardsTabContent />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-    
