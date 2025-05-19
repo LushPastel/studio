@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Image from 'next/image';
 import Link from 'next/link';
 import { AD_REWARDS_TIERED, MAX_ADS_PER_DAY, AD_DURATION_SECONDS } from '@/lib/constants';
-import { format, parseISO, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, isPast } from 'date-fns';
+import { format, parseISO, isSameDay, isPast, addDays, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const DayIndicator = ({ date, isCheckedIn, isPastAndMissed }: { date: Date; isCheckedIn: boolean; isPastAndMissed: boolean }) => {
@@ -62,7 +62,6 @@ export default function DailyStreakPage() {
             return 100;
           }
           // Calculate increment based on total duration and number of steps
-          // Ensures progress reaches 100 in AD_DURATION_SECONDS
           return prev + (100 / (AD_DURATION_SECONDS * (1000 / interval))); 
         });
       }, interval);
@@ -93,13 +92,21 @@ export default function DailyStreakPage() {
   };
 
   const today = new Date();
-  const monday = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
-  const sunday = endOfWeek(today, { weekStartsOn: 1 });
-  const currentWeekDays = eachDayOfInterval({ start: monday, end: sunday }); // This generates [Mon, Tue, ..., Sun]
+  // Explicitly calculate Monday of the current week
+  // getDay() returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday
+  const dayOfWeek = today.getDay(); 
+  // Calculate days to subtract to get to Monday. 
+  // If today is Sunday (0), Monday was 6 days ago. If Monday (1), 0 days ago.
+  const daysToSubtractForMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+  const mondayThisWeek = subDays(today, daysToSubtractForMonday);
+
+  // Generate the 7 days of the current week starting from Monday
+  const currentWeekDays = Array.from({ length: 7 }, (_, i) => addDays(mondayThisWeek, i));
   
   const userCheckIns = user.dailyCheckIns.map(dateStr => {
     try {
-      return parseISO(dateStr);
+      const parsedDate = parseISO(dateStr);
+      return isNaN(parsedDate.getTime()) ? null : parsedDate; // Check if date is valid
     } catch (e) {
       return null; // Handle invalid date strings gracefully
     }
@@ -127,6 +134,7 @@ export default function DailyStreakPage() {
           <div className="flex justify-around">
             {currentWeekDays.map((day) => {
               const isCheckedIn = userCheckIns.some(checkInDate => isSameDay(checkInDate, day));
+              // A day is missed if it's in the past (but not today) AND not checked in.
               const isPastAndMissed = isPast(day) && !isSameDay(day, today) && !isCheckedIn;
               return (
                 <DayIndicator 
@@ -199,7 +207,7 @@ export default function DailyStreakPage() {
                 </div>
                 <Progress value={adProgress} className="w-full [&>div]:bg-primary" />
                 <p className="text-center text-sm text-muted-foreground">
-                  Time remaining: {Math.max(0, AD_DURATION_SECONDS - Math.floor(adProgress / (100/(AD_DURATION_SECONDS * (1000 / (AD_DURATION_SECONDS * 10)))) )) }s
+                  Time remaining: {Math.max(0, AD_DURATION_SECONDS - Math.floor(adProgress / (100 / (AD_DURATION_SECONDS * (1000 / (AD_DURATION_SECONDS * 10)))) )) }s
                 </p>
               </>
             )}
