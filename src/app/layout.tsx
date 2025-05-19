@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 import { APP_NAME } from '@/lib/constants';
 import { I18nProviderWrapper } from '@/components/i18n-provider-wrapper';
-import "@/lib/i18n"; // Initialize i18next
+// import "@/lib/i18n"; // Initialize i18next - THIS LINE IS REMOVED
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
