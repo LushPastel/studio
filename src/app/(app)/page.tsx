@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Image from 'next/image';
 // import Link from 'next/link'; // Link to /home removed from header
 import { AD_REWARDS_TIERED, MAX_ADS_PER_DAY, AD_DURATION_SECONDS } from '@/lib/constants';
-import { format, parseISO, isSameDay, isPast, addDays, subDays } from 'date-fns';
+import { format, parseISO, isSameDay, isPast, addDays, subDays, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const DayIndicator = ({ date, isCheckedIn, isPastAndMissed, isToday }: { date: Date; isCheckedIn: boolean; isPastAndMissed: boolean; isToday: boolean; }) => {
@@ -24,18 +24,24 @@ const DayIndicator = ({ date, isCheckedIn, isPastAndMissed, isToday }: { date: D
         isCheckedIn ? "bg-green-500 border-green-600" :
         isPastAndMissed ? "bg-destructive border-destructive" :
         isToday ? "border-primary bg-transparent" : 
-        "border-border bg-transparent"
+        "border-border bg-transparent" // Future days
       )}>
         {isCheckedIn && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
         {isPastAndMissed && <X className="w-4 h-4 sm:w-5 sm:h-5 text-destructive-foreground" />}
-        {!isCheckedIn && !isPastAndMissed && isToday && (
+        {!isCheckedIn && !isPastAndMissed && isToday && ( /* Today, not checked/missed */
           <span className="text-sm font-semibold text-primary">{format(date, 'd')}</span>
         )}
          {!isCheckedIn && !isPastAndMissed && !isToday && ( /* Future day, not checked/missed */
           <span className="text-sm text-muted-foreground">{format(date, 'd')}</span>
         )}
       </div>
-      <span className="text-xs text-muted-foreground mt-0.5">{format(date, 'd')}</span>
+      {/* Display day number below the circle only if it's not already inside the circle (for today) */}
+      {!(isToday && !isCheckedIn && !isPastAndMissed) && (
+         <span className="text-xs text-muted-foreground mt-0.5">{format(date, 'd')}</span>
+      )}
+       {(isToday && !isCheckedIn && !isPastAndMissed) && ( // add placeholder to maintain height for today's non-circled number
+         <span className="text-xs text-transparent mt-0.5 select-none">{format(date, 'd')}</span>
+      )}
     </div>
   );
 };
@@ -60,14 +66,13 @@ export default function DailyStreakPage() {
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAdModalOpen && !isAdWatchedInModal) {
-      // Calculate interval to make progress smooth over AD_DURATION_SECONDS
-      const totalSteps = AD_DURATION_SECONDS * 10; // e.g., 50 steps for 5 seconds
-      const intervalDuration = (AD_DURATION_SECONDS * 1000) / totalSteps; // duration of each step in ms
+      const totalSteps = AD_DURATION_SECONDS * 20; // e.g., 100 steps for 5 seconds (20 steps per second)
+      const intervalDuration = 1000 / 20; // 50ms interval for smoother progress
       const progressIncrement = 100 / totalSteps;
 
       timer = setInterval(() => {
         setAdProgress((prev) => {
-          if (prev >= 100 - progressIncrement) { // check if close to 100 to avoid overshooting
+          if (prev >= 100 - progressIncrement) { 
             clearInterval(timer);
             setIsAdWatchedInModal(true);
             return 100;
@@ -82,9 +87,9 @@ export default function DailyStreakPage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
@@ -104,8 +109,8 @@ export default function DailyStreakPage() {
   const today = new Date();
   // Explicitly calculate Monday of the current week
   // getDay() returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday
-  const dayOfWeek = today.getDay();
-  // Calculate days to subtract to get to Monday.
+  const dayOfWeek = today.getDay(); 
+  // Calculate days to subtract to get to Monday. 
   // If today is Sunday (0), Monday was 6 days ago (relative to Sunday, so it's the start of the week).
   // If today is Monday (1), 0 days ago.
   const daysToSubtractForMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
@@ -113,11 +118,12 @@ export default function DailyStreakPage() {
 
   // Generate the 7 days of the current week starting from Monday
   const currentWeekDays = Array.from({ length: 7 }, (_, i) => addDays(mondayThisWeek, i));
-
+  
   const userCheckIns = user.dailyCheckIns.map(dateStr => {
     try {
       const parsedDate = parseISO(dateStr);
-      return isNaN(parsedDate.getTime()) ? null : parsedDate; // Check if date is valid
+      // Check if date is valid
+      return isValid(parsedDate) ? parsedDate : null;
     } catch (e) {
       return null; // Handle invalid date strings gracefully
     }
@@ -137,7 +143,7 @@ export default function DailyStreakPage() {
           <p className="text-sm opacity-80 mt-1">Extend your streak to unlock new rewards! Way to go!</p>
         </div>
       </div>
-
+      
       <Card className="mx-2 sm:mx-4 shadow-md">
         <CardContent className="p-4">
           <div className="flex justify-around">
@@ -147,9 +153,9 @@ export default function DailyStreakPage() {
               const isPastAndMissed = isPast(day) && !isSameDay(day, today) && !isCheckedIn;
               const isTodayFlag = isSameDay(day, today);
               return (
-                <DayIndicator
-                  key={day.toISOString()}
-                  date={day}
+                <DayIndicator 
+                  key={day.toISOString()} 
+                  date={day} 
                   isCheckedIn={isCheckedIn}
                   isPastAndMissed={isPastAndMissed}
                   isToday={isTodayFlag}
@@ -191,10 +197,10 @@ export default function DailyStreakPage() {
       </Card>
 
       <Dialog open={isAdModalOpen} onOpenChange={(open) => {
-         if (!open && !isAdWatchedInModal) {
-            setIsAdModalOpen(false);
-          } else if (!open && isAdWatchedInModal) {
-            handleClaimRewardAndCheckIn();
+         if (!open && !isAdWatchedInModal) { // If dialog is closed before ad finishes
+            setIsAdModalOpen(false); // Ensure it closes
+          } else if (!open && isAdWatchedInModal) { // If closed after ad finished (e.g. by clicking outside)
+            handleClaimRewardAndCheckIn(); // Still claim reward
           }
       }}>
         <DialogContent className="sm:max-w-[425px] bg-card border-primary/50">
@@ -240,3 +246,4 @@ export default function DailyStreakPage() {
     </div>
   );
 }
+
