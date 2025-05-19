@@ -1,9 +1,14 @@
 
-export const AD_REWARD = 0.50; // ₹0.50 per ad
 export const MIN_WITHDRAWAL_AMOUNT = 100; // ₹100
 export const REFERRAL_BONUS = 5; // ₹5 for both referrer and new user
 export const APP_NAME = "CashQuery";
 
 // Placeholder for your actual API base URL if you deploy a backend
-// For now, the app will use localStorage.
-export const API_BASE_URL = "REPLACE_WITH_YOUR_LIVE_API_BASE_URL";
+export const API_BASE_URL = "REPLACE_WITH_YOUR_LIVE_API_BASE_URL"; // Using placeholder
+
+// Daily Streak and Ad Watch constants
+export const MAX_ADS_PER_DAY = 7;
+export const AD_REWARDS_TIERED = [5, 12, 20, 27, 35, 40, 50]; // Up to 7 rewards
+export const AD_DURATION_SECONDS = 5; // Simulate 5 second ad duration
+
+    
