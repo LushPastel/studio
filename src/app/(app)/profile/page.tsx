@@ -107,12 +107,12 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center py-8 space-y-3">
         <Avatar className="h-24 w-24 border-2 border-primary">
           <AvatarImage
-            src={user.photoURL || `https://placehold.co/100x100.png?text=${user.name.charAt(0)}`}
-            alt={user.name}
+            src={user.photoURL || `https://placehold.co/100x100.png?text=${user.name ? user.name.charAt(0) : 'U'}`}
+            alt={user.name || 'User'}
             className="object-cover"
             data-ai-hint={user.photoURL ? "profile photo" : "avatar person"}
           />
-          <AvatarFallback className="text-4xl">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="text-4xl">{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
         </Avatar>
         <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
         <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -133,7 +133,7 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={BellRing} text="Notification Settings" href="/profile/notification-settings" />
         <Separator />
-        <ProfileListItem icon={Languages} text="App Language" onClick={() => toast({ title: "Coming Soon", description: "Language selection will be available soon."})} />
+        <ProfileListItem icon={Languages} text="App Language" href="/profile/language" />
         <Separator />
         <ProfileListItem icon={History} text="Reward History" href="/wallet" />
         <Separator />
@@ -148,3 +148,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
