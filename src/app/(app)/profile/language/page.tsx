@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, Hourglass, Check } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getTranslation } from '@/lib/translations'; // Import translation helper
 
 interface LanguageOption {
   code: string;
@@ -32,8 +33,9 @@ const languages: LanguageOption[] = [
 export default function AppLanguagePage() {
   const { user, isAuthenticated, isLoadingAuth, updateUser } = useAuth();
   const router = useRouter();
-  
+
   // Local state to manage the selected language, initialized from user or default
+  // Ensure user is not null before accessing user.appLanguage
   const [selectedLanguage, setSelectedLanguage] = useState(user?.appLanguage || 'en-US');
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function AppLanguagePage() {
       if (!isAuthenticated || !user) {
         router.push('/login');
       } else {
-        // Sync local state if context changes (e.g., user logs out and logs in as another user)
+        // Sync local state if context changes or user data becomes available
         if (user.appLanguage && user.appLanguage !== selectedLanguage) {
           setSelectedLanguage(user.appLanguage);
         }
@@ -53,9 +55,7 @@ export default function AppLanguagePage() {
     setSelectedLanguage(languageCode);
     if (user) {
       updateUser({ appLanguage: languageCode });
-      // Here you would typically also trigger a full app re-render or reload
-      // with the new language, but that's part of the full i18n implementation.
-      // For now, we just save the preference.
+      // The app will re-render due to context update, and translated text will be used
     }
   };
 
@@ -68,7 +68,7 @@ export default function AppLanguagePage() {
     );
   }
 
-  const suggestedLanguage = languages.find(lang => lang.code === 'en-US'); // Assuming English is always suggested
+  const suggestedLanguage = languages.find(lang => lang.code === 'en-US');
   const otherLanguages = languages.filter(lang => lang.code !== 'en-US');
 
   return (
@@ -77,7 +77,9 @@ export default function AppLanguagePage() {
         <Link href="/profile" className="text-primary hover:underline p-2 -ml-2 rounded-full hover:bg-muted">
           <ChevronLeft className="h-6 w-6" />
         </Link>
-        <h1 className="text-2xl font-bold text-foreground ml-2">App Language</h1>
+        <h1 className="text-2xl font-bold text-foreground ml-2">
+          {getTranslation(user.appLanguage, 'languageSettingsTitle')}
+        </h1>
       </div>
 
       <div className="space-y-6">
@@ -106,7 +108,7 @@ export default function AppLanguagePage() {
           </div>
         </section>
         <p className="text-xs text-muted-foreground text-center mt-4">
-            Note: Selecting a language here saves your preference. Full app content translation is not yet implemented.
+            Note: This demonstrates language preference saving. Full app translation is not yet implemented.
         </p>
       </div>
     </div>
@@ -125,8 +127,8 @@ const LanguageItem: React.FC<LanguageItemProps> = ({ language, isSelected, onSel
       onClick={() => onSelect(language.code)}
       className={cn(
         "cursor-pointer transition-all",
-        isSelected 
-          ? "bg-primary text-primary-foreground shadow-lg border-primary/50 ring-2 ring-primary ring-offset-2 ring-offset-background" 
+        isSelected
+          ? "bg-primary text-primary-foreground shadow-lg border-primary/50 ring-2 ring-primary ring-offset-2 ring-offset-background"
           : "bg-card hover:bg-muted/50 border-border"
       )}
     >

@@ -34,15 +34,15 @@ interface User {
   ageRange?: 'Prefer not to say' | '18-24' | '25-34' | '35-44' | '45-54' | '55+';
   contactMethod?: 'WhatsApp' | 'Instagram' | 'Telegram';
   contactDetail?: string;
-  notificationPreferences: NotificationPreferences; // Made non-optional
+  notificationPreferences: NotificationPreferences;
   photoURL?: string;
   claimedReferralTiers: string[];
   currentStreak: number;
-  lastStreakUpdate: string; 
+  lastStreakUpdate: string;
   adsWatchedToday: number;
-  lastAdWatchDate: string; 
+  lastAdWatchDate: string;
   dailyCheckIns: string[];
-  appLanguage: string; // New field
+  appLanguage: string;
 }
 
 export interface WithdrawalRequest {
@@ -60,15 +60,15 @@ interface AuthContextType {
   signup: (name: string, email: string, passwordInput: string, referralCodeInput?: string) => Promise<boolean>;
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
-  addBalance: (amount: number) => void;
-  addCoins: (amount: number) => boolean; 
-  spendCoins: (amount: number) => boolean; 
+  addBalance: (amount: number) => void; // Note: this only affects 'balance', not 'coins'
+  addCoins: (amount: number) => boolean;
+  spendCoins: (amount: number) => boolean;
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password'>>) => boolean;
-  googleSignIn: () => Promise<void>; 
-  getAllUsersForLeaderboard: () => User[]; 
+  googleSignIn: () => Promise<void>;
+  getAllUsersForLeaderboard: () => User[];
   recordAdWatchAndCheckIn: () => Promise<boolean>;
 }
 
@@ -156,9 +156,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               try { return isValid(parseISO(dateStr)) ? dateStr : null; } catch { return null; }
             })
             .filter(dateStr => dateStr !== null)
-            .sort((a, b) => b!.localeCompare(a!)) 
+            .sort((a, b) => b!.localeCompare(a!))
             .slice(0, 7) as string[];
-            
+
           // Persist updates made during initialization
           const userIndex = users.findIndex(u => u.id === loggedInUser!.id);
           if (userIndex !== -1) {
@@ -195,7 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Ensure coins and balance are always numbers
       if (updatedDetails.coins !== undefined) updatedDetails.coins = Number(updatedDetails.coins);
       if (updatedDetails.balance !== undefined) updatedDetails.balance = Number(updatedDetails.balance);
-      
+
       users[userIndex] = { ...users[userIndex], ...updatedDetails };
       saveAllUsers(users);
       return users[userIndex];
@@ -229,11 +229,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       photoURL: undefined,
       claimedReferralTiers: [],
       currentStreak: 0,
-      lastStreakUpdate: "", 
+      lastStreakUpdate: "",
       adsWatchedToday: 0,
-      lastAdWatchDate: "", 
+      lastAdWatchDate: "",
       dailyCheckIns: [],
-      appLanguage: 'en-US',
+      appLanguage: 'en-US', // Default language
     };
 
     if (referralCodeInput) {
@@ -252,10 +252,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code entered was invalid. Signup proceeded without this bonus." });
       }
     }
-    
+
     allUsers.push(newUser);
     saveAllUsers(allUsers);
-    
+
     const { password, ...userToSet } = newUser;
     setUser(userToSet as User);
     setIsAuthenticated(true);
@@ -322,11 +322,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .sort((a,b) => b!.localeCompare(a!))
         .slice(0, 7) as string[];
 
-    updateUserInStorage(userToLogin.id, { 
-        adsWatchedToday: userToLogin.adsWatchedToday, 
+    updateUserInStorage(userToLogin.id, {
+        adsWatchedToday: userToLogin.adsWatchedToday,
         currentStreak: userToLogin.currentStreak,
         dailyCheckIns: userToLogin.dailyCheckIns,
-        lastAdWatchDate: userToLogin.lastAdWatchDate === today ? today : userToLogin.lastAdWatchDate, // ensure lastAdWatchDate is updated if adsWatchedToday was reset
+        lastAdWatchDate: userToLogin.lastAdWatchDate === today ? today : userToLogin.lastAdWatchDate,
         lastStreakUpdate: userToLogin.lastStreakUpdate,
     });
 
@@ -444,7 +444,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     allUsers[referrerIndex].balance = parseFloat(((allUsers[referrerIndex].balance || 0) + REFERRAL_BONUS).toFixed(2));
     allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS;
     allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
-    saveAllUsers(allUsers); 
+    saveAllUsers(allUsers);
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
     return true;
   };
@@ -454,7 +454,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
       return false;
     }
-    // Ensure numeric fields are handled correctly
     const updateData: Partial<User> = { ...updatedDetails };
     if (updatedDetails.balance !== undefined) updateData.balance = Number(updatedDetails.balance);
     if (updatedDetails.coins !== undefined) updateData.coins = Number(updatedDetails.coins);
@@ -472,7 +471,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const mockGoogleUserEmail = "google.user@example.com";
     const mockGoogleUserName = "Google User";
     const mockGoogleUserPhotoURL = "https://placehold.co/100x100/7DF9FF/0D1117?text=G";
-    
+
     let allUsers = getAllUsers();
     let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
 
@@ -481,7 +480,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword", 
+        password: "mockpassword",
         balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0,
         hasAppliedReferral: false, hasRatedApp: false, gender: 'Not Specified',
         ageRange: 'Prefer not to say', contactMethod: 'WhatsApp', contactDetail: '',
@@ -493,24 +492,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       allUsers.push(googleUser);
       saveAllUsers(allUsers);
     } else {
-        googleUser.photoURL = googleUser.photoURL || mockGoogleUserPhotoURL; // ensure photo is set
-        // Ensure all fields are present
+        googleUser.photoURL = googleUser.photoURL || mockGoogleUserPhotoURL;
         googleUser.balance = Number(googleUser.balance) || 0;
         googleUser.coins = Number(googleUser.coins) || 0;
-        // ... (repeat for all other User fields ensure they exist with default if not)
-        googleUser.notificationPreferences = googleUser.notificationPreferences || { offers: true, promo: true, payments: true, updates: true };
-        googleUser.claimedReferralTiers = googleUser.claimedReferralTiers || [];
-        googleUser.currentStreak = googleUser.currentStreak || 0;
-        // ... etc.
+        googleUser.referralsMade = Number(googleUser.referralsMade) || 0;
+        googleUser.hasAppliedReferral = !!googleUser.hasAppliedReferral;
+        googleUser.hasRatedApp = !!googleUser.hasRatedApp;
+        googleUser.gender = googleUser.gender || 'Not Specified';
+        googleUser.ageRange = googleUser.ageRange || 'Prefer not to say';
+        googleUser.contactMethod = googleUser.contactMethod || 'WhatsApp';
+        googleUser.contactDetail = googleUser.contactDetail || '';
+        googleUser.notificationPreferences = googleUser.notificationPreferences || {
+          offers: true, promo: true, payments: true, updates: true,
+        };
+        googleUser.claimedReferralTiers = Array.isArray(googleUser.claimedReferralTiers) ? googleUser.claimedReferralTiers : [];
+        googleUser.currentStreak = Number(googleUser.currentStreak) || 0;
+        googleUser.lastStreakUpdate = googleUser.lastStreakUpdate || "";
+        googleUser.adsWatchedToday = Number(googleUser.adsWatchedToday) || 0;
+        googleUser.lastAdWatchDate = googleUser.lastAdWatchDate || "";
+        googleUser.dailyCheckIns = Array.isArray(googleUser.dailyCheckIns) ? googleUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
         googleUser.appLanguage = googleUser.appLanguage || 'en-US';
-        updateUserInStorage(googleUser.id, googleUser); // Save if updated
+        updateUserInStorage(googleUser.id, googleUser);
     }
-    await login(googleUser.email, googleUser.password!); 
+    await login(googleUser.email, googleUser.password!);
     toast({ title: "Signed in with Google (Simulated)" });
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
     const users = getAllUsers();
+    // Ensure all fields are present and correctly typed for each user
     return users.map(u => ({
       id: u.id,
       email: u.email,
@@ -544,13 +554,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    const currentUser = getFullUserFromStorage(user.id); // Get fresh copy from LS
-    if (!currentUser) {
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) {
          toast({ variant: "destructive", title: "Error", description: "User data not found." });
         return false;
     }
-    
-    let mutableUser = { ...currentUser }; // Operate on a mutable copy
+
+    let mutableUser = { ...currentUserData };
     const today = todayISOString();
     const yesterday = yesterdayISOString();
 
@@ -561,7 +571,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (mutableUser.adsWatchedToday >= MAX_ADS_PER_DAY) {
       toast({ title: "Ad Limit Reached", description: "You've watched all available ads for today." });
-      // Still update user state in context to reflect adsWatchedToday if date changed
       setUser(prev => prev ? {...prev, adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate } : null);
       updateUserInStorage(mutableUser.id, { adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate });
       return false;
@@ -569,36 +578,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const rewardIndex = mutableUser.adsWatchedToday;
     const reward = AD_REWARDS_TIERED[rewardIndex < AD_REWARDS_TIERED.length ? rewardIndex : AD_REWARDS_TIERED.length -1];
-    
+
     const currentCoins = Number(mutableUser.coins) || 0;
     mutableUser.coins = currentCoins + Number(reward);
     mutableUser.adsWatchedToday += 1;
 
-    let hasCheckedInToday = mutableUser.dailyCheckIns.some(dateStr => isSameDay(parseISO(dateStr), new Date()));
+    let hasCheckedInToday = mutableUser.dailyCheckIns.some(dateStr => {
+        try { return isSameDay(parseISO(dateStr), new Date()); } catch { return false; }
+    });
 
-    if (!hasCheckedInToday) { 
+
+    if (!hasCheckedInToday) {
       if (mutableUser.lastStreakUpdate === yesterday) {
         mutableUser.currentStreak = (Number(mutableUser.currentStreak) || 0) + 1;
-      } else if (mutableUser.lastStreakUpdate !== today) { 
-        mutableUser.currentStreak = 1; 
+      } else if (mutableUser.lastStreakUpdate !== today) {
+        mutableUser.currentStreak = 1;
       }
       mutableUser.lastStreakUpdate = today;
 
       let newCheckIns = [today, ...mutableUser.dailyCheckIns.filter(d => d !== today)];
-      newCheckIns = Array.from(new Set(newCheckIns)) 
-                         .sort((a,b) => b.localeCompare(a)) 
-                         .slice(0, 7); 
+      newCheckIns = Array.from(new Set(newCheckIns))
+                         .sort((a,b) => b.localeCompare(a))
+                         .slice(0, 7);
       mutableUser.dailyCheckIns = newCheckIns;
     }
-    
+
     const { password, ...userForState } = mutableUser;
-    setUser(userForState as User); // Update context state
-    updateUserInStorage(mutableUser.id, userForState); // Persist all changes to LS
-    
+    setUser(userForState as User);
+    updateUserInStorage(mutableUser.id, userForState);
+
     toast({ title: "Reward Claimed!", description: `You earned ${reward} coins!` });
     return true;
   };
-  
+
   // Helper to get full user data from storage, useful for functions that need the latest persisted state
   const getFullUserFromStorage = (userId: string): User | undefined => {
     const users = getAllUsers();
@@ -626,4 +638,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
