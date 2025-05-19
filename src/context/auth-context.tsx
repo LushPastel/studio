@@ -4,7 +4,16 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { API_BASE_URL, MIN_WITHDRAWAL_AMOUNT, REFERRAL_BONUS, APP_NAME, MAX_ADS_PER_DAY, AD_REWARDS_TIERED } from '@/lib/constants';
+import {
+  API_BASE_URL,
+  MIN_WITHDRAWAL_AMOUNT,
+  REFERRAL_BONUS,
+  APP_NAME,
+  MAX_ADS_PER_DAY,
+  AD_REWARDS_TIERED,
+  SPECIAL_BONUS_ADS_REQUIRED,
+  SPECIAL_BONUS_COIN_REWARD
+} from '@/lib/constants';
 import { format, subDays, parseISO, isValid, isSameDay } from 'date-fns';
 
 // Constants for localStorage keys
@@ -23,7 +32,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  password?: string; 
+  password?: string;
   balance: number;
   coins: number;
   referralCode: string;
@@ -42,6 +51,8 @@ interface User {
   adsWatchedToday: number;
   lastAdWatchDate: string;
   dailyCheckIns: string[];
+  specialBonusAdsWatched: number;
+  specialBonusCompleted: boolean;
 }
 
 export interface WithdrawalRequest {
@@ -69,6 +80,7 @@ interface AuthContextType {
   googleSignIn: () => Promise<void>;
   getAllUsersForLeaderboard: () => User[];
   recordAdWatchAndCheckIn: () => Promise<boolean>;
+  recordSpecialBonusAdWatch: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -105,6 +117,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
   const { toast } = useToast();
 
+  const initializeUserFields = (userData: any): User => {
+    return {
+      ...userData,
+      balance: Number(userData.balance) || 0,
+      coins: Number(userData.coins) || 0,
+      referralsMade: Number(userData.referralsMade) || 0,
+      hasAppliedReferral: !!userData.hasAppliedReferral,
+      hasRatedApp: !!userData.hasRatedApp,
+      gender: userData.gender || 'Not Specified',
+      ageRange: userData.ageRange || 'Prefer not to say',
+      contactMethod: userData.contactMethod || 'WhatsApp',
+      contactDetail: userData.contactDetail || '',
+      notificationPreferences: userData.notificationPreferences || {
+        offers: true, promo: true, payments: true, updates: true,
+      },
+      photoURL: userData.photoURL || undefined,
+      claimedReferralTiers: Array.isArray(userData.claimedReferralTiers) ? userData.claimedReferralTiers : [],
+      currentStreak: Number(userData.currentStreak) || 0,
+      lastStreakUpdate: userData.lastStreakUpdate || "",
+      adsWatchedToday: Number(userData.adsWatchedToday) || 0,
+      lastAdWatchDate: userData.lastAdWatchDate || "",
+      dailyCheckIns: Array.isArray(userData.dailyCheckIns) ? userData.dailyCheckIns.filter(d => typeof d === 'string') : [],
+      specialBonusAdsWatched: Number(userData.specialBonusAdsWatched) || 0,
+      specialBonusCompleted: !!userData.specialBonusCompleted,
+    };
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       setIsLoadingAuth(false);
@@ -116,30 +155,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (currentUserId) {
         const users = getAllUsers();
-        loggedInUser = users.find(u => u.id === currentUserId);
-        if (loggedInUser) {
+        const rawUser = users.find(u => u.id === currentUserId);
+        if (rawUser) {
+          loggedInUser = initializeUserFields(rawUser);
+
           const today = todayISOString();
           const yesterday = yesterdayISOString();
-
-          loggedInUser.balance = Number(loggedInUser.balance) || 0;
-          loggedInUser.coins = Number(loggedInUser.coins) || 0;
-          loggedInUser.referralsMade = Number(loggedInUser.referralsMade) || 0;
-          loggedInUser.hasAppliedReferral = !!loggedInUser.hasAppliedReferral;
-          loggedInUser.hasRatedApp = !!loggedInUser.hasRatedApp;
-          loggedInUser.gender = loggedInUser.gender || 'Not Specified';
-          loggedInUser.ageRange = loggedInUser.ageRange || 'Prefer not to say';
-          loggedInUser.contactMethod = loggedInUser.contactMethod || 'WhatsApp';
-          loggedInUser.contactDetail = loggedInUser.contactDetail || '';
-          loggedInUser.notificationPreferences = loggedInUser.notificationPreferences || {
-            offers: true, promo: true, payments: true, updates: true,
-          };
-          loggedInUser.photoURL = loggedInUser.photoURL || undefined;
-          loggedInUser.claimedReferralTiers = Array.isArray(loggedInUser.claimedReferralTiers) ? loggedInUser.claimedReferralTiers : [];
-          loggedInUser.currentStreak = Number(loggedInUser.currentStreak) || 0;
-          loggedInUser.lastStreakUpdate = loggedInUser.lastStreakUpdate || "";
-          loggedInUser.adsWatchedToday = Number(loggedInUser.adsWatchedToday) || 0;
-          loggedInUser.lastAdWatchDate = loggedInUser.lastAdWatchDate || "";
-          loggedInUser.dailyCheckIns = Array.isArray(loggedInUser.dailyCheckIns) ? loggedInUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
 
           if (loggedInUser.lastAdWatchDate !== today) {
             loggedInUser.adsWatchedToday = 0;
@@ -157,7 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           const userIndex = users.findIndex(u => u.id === loggedInUser!.id);
           if (userIndex !== -1) {
-            users[userIndex] = loggedInUser;
+            users[userIndex] = loggedInUser; // Save potentially updated streak/ad data
             saveAllUsers(users);
           }
 
@@ -175,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Error during auth initialization from localStorage:", error);
-      localStorage.removeItem(LS_CURRENT_USER_ID_KEY); 
+      localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -186,9 +207,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
-      if (updatedDetails.coins !== undefined) updatedDetails.coins = Number(updatedDetails.coins);
-      if (updatedDetails.balance !== undefined) updatedDetails.balance = Number(updatedDetails.balance);
-
       users[userIndex] = { ...users[userIndex], ...updatedDetails };
       saveAllUsers(users);
       return users[userIndex];
@@ -212,7 +230,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       coins: 0,
       referralCode: generateReferralCode(),
       referralsMade: 0,
-      hasAppliedReferral: false, // No referral code applied at signup by default now
+      hasAppliedReferral: false,
       hasRatedApp: false,
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
@@ -226,6 +244,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: 0,
       lastAdWatchDate: "",
       dailyCheckIns: [],
+      specialBonusAdsWatched: 0,
+      specialBonusCompleted: false,
     };
 
     allUsers.push(newUser);
@@ -245,40 +265,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, passwordInput: string): Promise<boolean> => {
     const users = getAllUsers();
-    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const rawFoundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-    if (!foundUser) {
+    if (!rawFoundUser) {
       toast({ variant: "destructive", title: "Login Failed", description: "Email not found. Please sign up." });
       return false;
     }
-    if (foundUser.password !== passwordInput) {
+    if (rawFoundUser.password !== passwordInput) {
       toast({ variant: "destructive", title: "Login Failed", description: "Incorrect password." });
       return false;
     }
 
+    let userToLogin = initializeUserFields(rawFoundUser);
+
     const today = todayISOString();
     const yesterday = yesterdayISOString();
-    let userToLogin = { ...foundUser };
-
-    userToLogin.balance = Number(userToLogin.balance) || 0;
-    userToLogin.coins = Number(userToLogin.coins) || 0;
-    userToLogin.referralsMade = Number(userToLogin.referralsMade) || 0;
-    userToLogin.hasAppliedReferral = !!userToLogin.hasAppliedReferral;
-    userToLogin.hasRatedApp = !!userToLogin.hasRatedApp;
-    userToLogin.gender = userToLogin.gender || 'Not Specified';
-    userToLogin.ageRange = userToLogin.ageRange || 'Prefer not to say';
-    userToLogin.contactMethod = userToLogin.contactMethod || 'WhatsApp';
-    userToLogin.contactDetail = userToLogin.contactDetail || '';
-    userToLogin.notificationPreferences = userToLogin.notificationPreferences || {
-      offers: true, promo: true, payments: true, updates: true,
-    };
-    userToLogin.photoURL = userToLogin.photoURL || undefined;
-    userToLogin.claimedReferralTiers = Array.isArray(userToLogin.claimedReferralTiers) ? userToLogin.claimedReferralTiers : [];
-    userToLogin.currentStreak = Number(userToLogin.currentStreak) || 0;
-    userToLogin.lastStreakUpdate = userToLogin.lastStreakUpdate || "";
-    userToLogin.adsWatchedToday = Number(userToLogin.adsWatchedToday) || 0;
-    userToLogin.lastAdWatchDate = userToLogin.lastAdWatchDate || "";
-    userToLogin.dailyCheckIns = Array.isArray(userToLogin.dailyCheckIns) ? userToLogin.dailyCheckIns.filter(d => typeof d === 'string') : [];
 
     if (userToLogin.lastAdWatchDate !== today) {
         userToLogin.adsWatchedToday = 0;
@@ -286,7 +287,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (userToLogin.lastStreakUpdate !== today && userToLogin.lastStreakUpdate !== yesterday) {
         userToLogin.currentStreak = 0;
     }
-    userToLogin.dailyCheckIns = userToLogin.dailyCheckIns
+     userToLogin.dailyCheckIns = userToLogin.dailyCheckIns
         .map(dateStr => {
             try { return isValid(parseISO(dateStr)) ? dateStr : null; } catch { return null; }
         })
@@ -337,8 +338,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "User not logged in." });
       return false;
     }
-    const currentCoins = Number(user.coins) || 0;
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) return false;
+
+    const currentCoins = Number(currentUserData.coins) || 0;
     const newCoins = currentCoins + Number(amount);
+
     setUser(prevUser => prevUser ? { ...prevUser, coins: newCoins } : null);
     updateUserInStorage(user.id, { coins: newCoins });
     return true;
@@ -349,7 +354,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ variant: "destructive", title: "Error", description: "User not logged in." });
         return false;
     }
-    const currentCoins = Number(user.coins) || 0;
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) return false;
+
+    const currentCoins = Number(currentUserData.coins) || 0;
     if (currentCoins < Number(amount)) {
       toast({ variant: "destructive", title: "Not enough coins", description: "You don't have enough coins for this action." });
       return false;
@@ -361,14 +369,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const requestWithdrawal = (amount: number): boolean => {
-    if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-      // console.log("Withdrawal request would be made here if API_BASE_URL was configured.");
-    }
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
       return false;
     }
-    if (user.balance < amount) {
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) return false;
+
+    if (currentUserData.balance < amount) {
       toast({ variant: "destructive", title: "Withdrawal Failed", description: "Insufficient balance." });
       return false;
     }
@@ -376,7 +384,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Withdrawal Failed", description: `Minimum withdrawal amount is ₹${MIN_WITHDRAWAL_AMOUNT}.` });
       return false;
     }
-    const newBalance = parseFloat((user.balance - amount).toFixed(2));
+    const newBalance = parseFloat((currentUserData.balance - amount).toFixed(2));
     setUser(prevUser => prevUser ? { ...prevUser, balance: newBalance } : null);
     updateUserInStorage(user.id, { balance: newBalance });
 
@@ -397,29 +405,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply a referral code." });
       return false;
     }
-    if (user.hasAppliedReferral) {
-      toast({ variant: "destructive", title: "Referral Failed", description: "You have already applied a referral bonus." });
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData || currentUserData.hasAppliedReferral) {
+      toast({ variant: "destructive", title: "Referral Failed", description: "You have already applied a referral bonus or user data is missing." });
       return false;
     }
+
     let allUsers = getAllUsers();
     const codeToCompare = code.trim().toUpperCase();
-    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === codeToCompare && u.id !== user.id);
+    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === codeToCompare && u.id !== currentUserData.id);
 
     if (referrerIndex === -1) {
       toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code is invalid or does not exist." });
       return false;
     }
 
-    const applicantNewBalance = parseFloat(((user.balance || 0) + REFERRAL_BONUS).toFixed(2));
-    const applicantNewCoins = (user.coins || 0) + REFERRAL_BONUS;
-    const applicantUpdatedFields = { balance: applicantNewBalance, coins: applicantNewCoins, hasAppliedReferral: true };
+    const applicantNewBalance = parseFloat(((currentUserData.balance || 0) + REFERRAL_BONUS).toFixed(2));
+    const applicantNewCoins = (currentUserData.coins || 0) + REFERRAL_BONUS;
+    const applicantUpdatedFields: Partial<User> = { balance: applicantNewBalance, coins: applicantNewCoins, hasAppliedReferral: true };
+    
     setUser(prevUser => prevUser ? { ...prevUser, ...applicantUpdatedFields } : null);
-    updateUserInStorage(user.id, applicantUpdatedFields);
+    updateUserInStorage(currentUserData.id, applicantUpdatedFields);
+    allUsers = getAllUsers(); // Re-fetch after own update
 
-    allUsers[referrerIndex].balance = parseFloat(((allUsers[referrerIndex].balance || 0) + REFERRAL_BONUS).toFixed(2));
-    allUsers[referrerIndex].coins = (allUsers[referrerIndex].coins || 0) + REFERRAL_BONUS;
-    allUsers[referrerIndex].referralsMade = (allUsers[referrerIndex].referralsMade || 0) + 1;
+    let referrer = allUsers[referrerIndex];
+    referrer.balance = parseFloat(((referrer.balance || 0) + REFERRAL_BONUS).toFixed(2));
+    referrer.coins = (referrer.coins || 0) + REFERRAL_BONUS;
+    referrer.referralsMade = (referrer.referralsMade || 0) + 1;
+    allUsers[referrerIndex] = referrer;
     saveAllUsers(allUsers);
+
     toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
     return true;
   };
@@ -429,15 +444,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
       return false;
     }
-    const updateData: Partial<User> = { ...updatedDetails };
-    if (updatedDetails.balance !== undefined) updateData.balance = Number(updatedDetails.balance);
-    if (updatedDetails.coins !== undefined) updateData.coins = Number(updatedDetails.coins);
-    if (updatedDetails.referralsMade !== undefined) updateData.referralsMade = Number(updatedDetails.referralsMade);
-    if (updatedDetails.currentStreak !== undefined) updateData.currentStreak = Number(updatedDetails.currentStreak);
-    if (updatedDetails.adsWatchedToday !== undefined) updateData.adsWatchedToday = Number(updatedDetails.adsWatchedToday);
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) return false;
     
-    setUser(prevUser => prevUser ? { ...prevUser, ...updateData } : null);
-    updateUserInStorage(user.id, updateData);
+    const updatedUser = { ...currentUserData, ...updatedDetails };
+    setUser(updatedUser);
+    updateUserInStorage(user.id, updatedUser);
     return true;
   };
 
@@ -450,77 +462,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
 
     if (!googleUser) {
-      googleUser = {
+      googleUser = initializeUserFields({
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
         password: "mockpassword", // Required for login flow
+        photoURL: mockGoogleUserPhotoURL,
         balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0,
         hasAppliedReferral: false, hasRatedApp: false, gender: 'Not Specified',
         ageRange: 'Prefer not to say', contactMethod: 'WhatsApp', contactDetail: '',
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
-        photoURL: mockGoogleUserPhotoURL, claimedReferralTiers: [],
-        currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0, lastAdWatchDate: "", dailyCheckIns: [],
-      };
+        claimedReferralTiers: [], currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0,
+        lastAdWatchDate: "", dailyCheckIns: [], specialBonusAdsWatched: 0, specialBonusCompleted: false,
+      });
       allUsers.push(googleUser);
       saveAllUsers(allUsers);
     } else {
-        // Ensure all fields are present for existing Google user
+        googleUser = initializeUserFields(googleUser); // Ensure all fields are present
         googleUser.photoURL = googleUser.photoURL || mockGoogleUserPhotoURL;
         googleUser.password = googleUser.password || "mockpassword";
-        googleUser.balance = Number(googleUser.balance) || 0;
-        googleUser.coins = Number(googleUser.coins) || 0;
-        googleUser.referralsMade = Number(googleUser.referralsMade) || 0;
-        googleUser.hasAppliedReferral = !!googleUser.hasAppliedReferral;
-        googleUser.hasRatedApp = !!googleUser.hasRatedApp;
-        googleUser.gender = googleUser.gender || 'Not Specified';
-        googleUser.ageRange = googleUser.ageRange || 'Prefer not to say';
-        googleUser.contactMethod = googleUser.contactMethod || 'WhatsApp';
-        googleUser.contactDetail = googleUser.contactDetail || '';
-        googleUser.notificationPreferences = googleUser.notificationPreferences || {
-          offers: true, promo: true, payments: true, updates: true,
-        };
-        googleUser.claimedReferralTiers = Array.isArray(googleUser.claimedReferralTiers) ? googleUser.claimedReferralTiers : [];
-        googleUser.currentStreak = Number(googleUser.currentStreak) || 0;
-        googleUser.lastStreakUpdate = googleUser.lastStreakUpdate || "";
-        googleUser.adsWatchedToday = Number(googleUser.adsWatchedToday) || 0;
-        googleUser.lastAdWatchDate = googleUser.lastAdWatchDate || "";
-        googleUser.dailyCheckIns = Array.isArray(googleUser.dailyCheckIns) ? googleUser.dailyCheckIns.filter(d => typeof d === 'string') : [];
         updateUserInStorage(googleUser.id, googleUser);
     }
-    // Use the existing login function which also handles streak/ad updates
     await login(googleUser.email, googleUser.password!);
     toast({ title: "Signed in with Google (Simulated)" });
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
-    // This function now directly calls getAllUsers from localStorage.
-    // The LeaderboardTable will use this.
     const users = getAllUsers();
-    return users.map(u => ({
-      id: u.id,
-      email: u.email,
-      name: u.name || "Unnamed User",
-      password: u.password, 
-      balance: Number(u.balance) || 0,
-      coins: Number(u.coins) || 0,
-      referralCode: u.referralCode,
-      referralsMade: Number(u.referralsMade) || 0,
-      hasAppliedReferral: !!u.hasAppliedReferral,
-      hasRatedApp: !!u.hasRatedApp,
-      gender: u.gender || 'Not Specified',
-      ageRange: u.ageRange || 'Prefer not to say',
-      contactMethod: u.contactMethod || 'WhatsApp',
-      contactDetail: u.contactDetail || '',
-      notificationPreferences: u.notificationPreferences || { offers: true, promo: true, payments: true, updates: true },
-      photoURL: u.photoURL || undefined,
-      claimedReferralTiers: Array.isArray(u.claimedReferralTiers) ? u.claimedReferralTiers : [],
-      currentStreak: Number(u.currentStreak) || 0,
-      lastStreakUpdate: u.lastStreakUpdate || "",
-      adsWatchedToday: Number(u.adsWatchedToday) || 0,
-      lastAdWatchDate: u.lastAdWatchDate || "",
-      dailyCheckIns: Array.isArray(u.dailyCheckIns) ? u.dailyCheckIns.filter(d => typeof d === 'string') : [],
-    }));
+    return users.map(u => initializeUserFields(u));
   };
 
   const recordAdWatchAndCheckIn = async (): Promise<boolean> => {
@@ -586,9 +555,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
+  const recordSpecialBonusAdWatch = async (): Promise<boolean> => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
+      return false;
+    }
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) {
+      toast({ variant: "destructive", title: "Error", description: "User data not found." });
+      return false;
+    }
+
+    let mutableUser = { ...currentUserData };
+
+    if (mutableUser.specialBonusCompleted) {
+      toast({ title: "Bonus Unavailable", description: "You have already claimed this special bonus." });
+      return false;
+    }
+
+    mutableUser.specialBonusAdsWatched = (Number(mutableUser.specialBonusAdsWatched) || 0) + 1;
+
+    if (mutableUser.specialBonusAdsWatched >= SPECIAL_BONUS_ADS_REQUIRED) {
+      const currentCoins = Number(mutableUser.coins) || 0;
+      mutableUser.coins = currentCoins + SPECIAL_BONUS_COIN_REWARD;
+      mutableUser.specialBonusCompleted = true;
+      mutableUser.specialBonusAdsWatched = SPECIAL_BONUS_ADS_REQUIRED; // Cap it
+      toast({ title: "Special Bonus Claimed!", description: `You earned ${SPECIAL_BONUS_COIN_REWARD} coins!` });
+    } else {
+      toast({ title: "Ad Watched!", description: `Watch ${SPECIAL_BONUS_ADS_REQUIRED - mutableUser.specialBonusAdsWatched} more ads to claim the bonus.` });
+    }
+    
+    const { password, ...userForState } = mutableUser;
+    setUser(userForState as User);
+    updateUserInStorage(mutableUser.id, userForState);
+    return true;
+  };
+
   const getFullUserFromStorage = (userId: string): User | undefined => {
     const users = getAllUsers();
-    return users.find(u => u.id === userId);
+    const rawUser = users.find(u => u.id === userId);
+    return rawUser ? initializeUserFields(rawUser) : undefined;
   };
 
 
@@ -598,7 +604,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signup, login, logout, addBalance, addCoins, spendCoins,
         requestWithdrawal, withdrawalHistory, applyReferral, updateUser,
         googleSignIn, getAllUsersForLeaderboard,
-        recordAdWatchAndCheckIn
+        recordAdWatchAndCheckIn, recordSpecialBonusAdWatch
     }}>
       {children}
     </AuthContext.Provider>

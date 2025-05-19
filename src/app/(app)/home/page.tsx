@@ -1,14 +1,15 @@
 
 "use client";
 
-import React, { useEffect } from 'react'; 
+import React, { useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
-import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard'; 
+import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard';
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
+import { SpecialBonusAdCard } from '@/components/home/SpecialBonusAdCard'; // New import
 import { useToast } from '@/hooks/use-toast';
 import { APP_NAME } from '@/lib/constants';
 
@@ -49,9 +50,9 @@ export default function HomePage() {
     );
   }
 
-  const handleRateUs = async () => { 
+  const handleRateUs = async () => {
     if (user && !user.hasRatedApp) {
-      const success = await addCoins(20); 
+      const success = await addCoins(20);
       if (success) {
         updateUser({ hasRatedApp: true });
         toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
@@ -82,9 +83,9 @@ export default function HomePage() {
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <QuickActionCard
-            title="Dashboard"
+            title="Daily Log"
             description="View your streak calendar"
-            href="/dashboard"
+            href="/" 
             className="bg-card hover:bg-muted/50"
             iconType="dashboard"
           />
@@ -150,7 +151,7 @@ export default function HomePage() {
             title="See All"
             cardType="seeAll"
             className="bg-purple-600 text-white"
-            href="/all-tasks" 
+            href="/all-tasks"
           />
         </div>
       </section>
@@ -178,7 +179,7 @@ export default function HomePage() {
             title="See All"
             cardType="seeAll"
             className="bg-purple-600 text-white"
-            href="/all-surveys" 
+            href="/all-surveys"
           />
         </div>
       </section>
@@ -188,13 +189,8 @@ export default function HomePage() {
       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Bonus Offers</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+           <SpecialBonusAdCard /> {/* Replaced OfferCard with SpecialBonusAdCard */}
            <OfferCard
-            title="Special Bonus"
-            icon={Gift}
-            className="bg-pink-500 text-white"
-            onClickAction={() => console.log('Bonus clicked')}
-          />
-          <OfferCard
             title="Rate Us"
             subtitle={user?.hasRatedApp ? "Bonus Claimed! Thanks for your support." : `Enjoying ${APP_NAME}? Rate us 5 Stars & get 20 coins!`}
             customIconElement={<FiveStars />}
