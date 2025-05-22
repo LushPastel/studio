@@ -178,12 +178,12 @@ export default function EditProfilePage() {
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
-    const success = updateUser({
+    const success = updateUser({ // updateUser is synchronous in this context
       name: data.name,
-      photoURL: data.photoURL,
+      photoURL: data.photoURL, // This is now the Data URI
       gender: data.gender,
       ageRange: data.ageRange,
-      contactMethod: currentContactMethod,
+      contactMethod: currentContactMethod, // This is already correct from state
       contactDetail: data.contactDetail,
     });
 
@@ -197,9 +197,9 @@ export default function EditProfilePage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-foreground">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
@@ -409,6 +409,7 @@ export default function EditProfilePage() {
                 <Button variant="outline" onClick={() => {
                   setShowCropperDialog(false);
                   setOriginalImageSrc(null);
+                  if (fileInputRef.current) fileInputRef.current.value = ''; // Clear file input
                 }}>
                   Cancel
                 </Button>

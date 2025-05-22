@@ -31,7 +31,6 @@ export default function NotificationSettingsPage() {
   const { user, isAuthenticated, isLoadingAuth, updateUser } = useAuth();
   const router = useRouter();
   
-  // Local state to manage switch values, initialized from user or defaults
   const [preferences, setPreferences] = useState(user?.notificationPreferences || {
     offers: true,
     promo: true,
@@ -44,7 +43,6 @@ export default function NotificationSettingsPage() {
       if (!isAuthenticated || !user) {
         router.push('/login');
       } else {
-        // Ensure local state is synced with user context if it changes
         if (user.notificationPreferences) {
           setPreferences(user.notificationPreferences);
         }
@@ -60,9 +58,9 @@ export default function NotificationSettingsPage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-foreground">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }

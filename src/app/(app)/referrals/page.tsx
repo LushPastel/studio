@@ -3,10 +3,10 @@
 
 import { ReferralCodeCard } from '@/components/referrals/referral-code-card';
 import { ApplyReferralCard } from '@/components/referrals/apply-referral-card';
-import { ReferralRewardsTabContent } from '@/components/referrals/ReferralRewardsTabContent'; // New import
+import { ReferralRewardsTabContent } from '@/components/referrals/ReferralRewardsTabContent';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react'; // Added React import
 import { Hourglass } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,9 +24,9 @@ export default function ReferralsPage() {
 
   if (isLoadingAuth || !user) {
      return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }

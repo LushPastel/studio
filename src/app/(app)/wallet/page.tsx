@@ -4,10 +4,10 @@
 import { WithdrawalForm } from '@/components/wallet/withdrawal-form';
 import { WithdrawalHistory } from '@/components/wallet/withdrawal-history';
 import { BalanceCard } from '@/components/dashboard/balance-card'; 
-import { CoinProgressCard } from '@/components/wallet/CoinProgressCard'; // New import
+import { CoinProgressCard } from '@/components/wallet/CoinProgressCard'; 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react'; // Added React import
 import { Hourglass } from 'lucide-react';
 
 export default function WalletPage() {
@@ -22,9 +22,9 @@ export default function WalletPage() {
 
   if (isLoadingAuth || !user) {
      return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
@@ -39,9 +39,9 @@ export default function WalletPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-8"> {/* Added space-y-8 for consistent spacing */}
+        <div className="lg:col-span-1 space-y-8">
           <BalanceCard />
-          <CoinProgressCard /> {/* Added CoinProgressCard here */}
+          <CoinProgressCard />
           <WithdrawalForm />
         </div>
         <div className="lg:col-span-2">

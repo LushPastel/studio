@@ -63,9 +63,7 @@ export default function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (isLoggingOut) {
-      return;
-    }
+    if (isLoggingOut) return; // Prevent redirect loop while logging out
     if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
@@ -74,7 +72,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     setIsLoggingOut(true);
     logout();
-    router.push('/login');
+    router.push('/login'); // Ensure redirection happens after logout call
   };
 
   const handleCopyReferralCode = () => {
@@ -85,19 +83,19 @@ export default function ProfilePage() {
   };
 
   if (isLoggingOut) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
-        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-lg text-foreground">Logging out...</p>
+     return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+        <Hourglass className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-foreground">Logging out...</p>
       </div>
     );
   }
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4">
-        <Hourglass className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-lg text-foreground">Loading...</p>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+        <Hourglass className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
@@ -107,12 +105,12 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center py-8 space-y-3">
         <Avatar className="h-24 w-24 border-2 border-primary">
           <AvatarImage
-            src={user.photoURL || `https://placehold.co/100x100.png?text=${user.name ? user.name.charAt(0) : 'U'}`}
+            src={user.photoURL || undefined}
             alt={user.name || 'User'}
             className="object-cover"
             data-ai-hint={user.photoURL ? "profile photo" : "avatar person"}
           />
-          <AvatarFallback className="text-4xl">{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+          <AvatarFallback className="text-4xl bg-muted">{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
         </Avatar>
         <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
         <p className="text-sm text-muted-foreground">{user.email}</p>

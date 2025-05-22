@@ -14,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { APP_NAME } from '@/lib/constants';
 
 
-// Custom text-based icons for specific offer cards
 const OfferProIcon = () => <span className="font-black text-2xl leading-none">Offer<br/>.<br/>PRO</span>;
 const TimeWallIcon = () => <span className="font-black text-2xl leading-none">time<br/>wall</span>;
 const CPXIcon = () => <span className="font-black text-4xl">CPX</span>;
@@ -43,16 +42,16 @@ export default function HomePage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
 
   const handleRateUs = async () => {
     if (user && !user.hasRatedApp) {
-      const success = await addCoins(20);
+      const success = await addCoins(20); // Assuming addCoins might be async if it involves API in future
       if (success) {
         updateUser({ hasRatedApp: true });
         toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
