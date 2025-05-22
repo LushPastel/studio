@@ -51,7 +51,7 @@ export default function HomePage() {
 
   const handleRateUs = async () => {
     if (user && !user.hasRatedApp) {
-      const success = await addCoins(20); // Assuming addCoins might be async if it involves API in future
+      const success = await addCoins(20); 
       if (success) {
         updateUser({ hasRatedApp: true });
         toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
@@ -82,9 +82,9 @@ export default function HomePage() {
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <QuickActionCard
-            title="Daily Log"
+            title="Dashboard"
             description="View your streak calendar"
-            href="/"
+            href="/dashboard"
             className="bg-card hover:bg-muted/50"
             iconType="dashboard"
           />

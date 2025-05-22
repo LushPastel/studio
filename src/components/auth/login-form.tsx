@@ -44,7 +44,7 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
-  const { login } = useAuth();
+  const { login, googleSignIn } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -62,12 +62,19 @@ export function LoginForm() {
     const success = await login(values.email, values.password);
     setIsLoading(false);
     if (success) {
-      router.push('/home'); // Updated redirection
+      router.push('/home'); 
     } else {
       form.setError("password", { type: "manual", message: "Login failed. Check credentials." });
       form.resetField("password");
     }
   }
+  
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    await googleSignIn();
+    // googleSignIn in AuthContext handles routing on success
+    setIsLoading(false); 
+  };
 
   return (
     <Card className="shadow-xl border-primary/20">
@@ -146,11 +153,11 @@ export function LoginForm() {
         </div>
 
         <div className="space-y-3">
-          <Button variant="outline" type="button" className="w-full">
+          <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
             <GoogleIcon />
             Continue with Google
           </Button>
-          <Button variant="outline" type="button" className="w-full">
+          <Button variant="outline" type="button" className="w-full" disabled>
             <FacebookIcon />
             Continue with Facebook
           </Button>

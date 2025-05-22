@@ -70,13 +70,21 @@ export function SignupForm() {
     const signupSuccess = await signup(values.name, values.email, values.password);
 
     if (signupSuccess) {
-      router.push('/'); 
+      router.push('/home'); 
     } else {
+      // Error toast is handled in AuthContext
       form.resetField("password");
       form.resetField("confirmPassword");
     }
     setIsLoading(false);
   }
+  
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    await googleSignIn();
+    // googleSignIn in AuthContext handles routing on success
+    setIsLoading(false); 
+  };
 
   return (
     <Card className="shadow-xl border-primary/20">
@@ -200,11 +208,11 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-3">
-          <Button variant="outline" type="button" className="w-full" onClick={googleSignIn}>
+          <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
             <GoogleIcon />
             Continue with Google
           </Button>
-          <Button variant="outline" type="button" className="w-full">
+          <Button variant="outline" type="button" className="w-full" disabled>
             <FacebookIcon />
             Continue with Facebook
           </Button>

@@ -10,6 +10,8 @@ import { APP_NAME } from '@/lib/constants';
 export function AppHeader() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   
+  // Show minimal header if loading auth or if not authenticated and user is null
+  // (user might be null briefly even if authenticated, before data loads)
   const showMinimalHeader = isLoadingAuth || (!isAuthenticated && user === null);
 
   if (showMinimalHeader) {
@@ -17,7 +19,7 @@ export function AppHeader() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-16">
         <div className="container mx-auto flex h-full items-center justify-between px-4 md:px-6">
           <Link
-            href="/" 
+            href="/home" // Link to /home for minimal header as well
             className={cn(
               "flex items-center space-x-2 text-primary",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
@@ -38,7 +40,7 @@ export function AppHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link
-          href="/"
+          href="/home" // App logo links to /home
           className={cn(
             "flex items-center space-x-2 text-primary",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"

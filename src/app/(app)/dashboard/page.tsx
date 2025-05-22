@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, Hourglass, Tv2, Coins, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Hourglass, Tv2, Coins, CheckCircle, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -12,26 +12,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Image from 'next/image';
 import Link from 'next/link';
 import { AD_REWARDS_TIERED, MAX_ADS_PER_DAY, AD_DURATION_SECONDS } from '@/lib/constants';
-import { format, subDays, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, isPast, addDays, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-const DayIndicator = ({ date, isCheckedIn }: { date: Date; isCheckedIn: boolean }) => {
+const DayIndicator = ({ date, isCheckedIn, isPastAndMissed, isToday }: { date: Date; isCheckedIn: boolean; isPastAndMissed: boolean; isToday: boolean; }) => {
   return (
     <div className="flex flex-col items-center">
       <span className="text-xs text-muted-foreground">{format(date, 'EEE')}</span>
       <div className={cn(
         "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 mt-1",
-        isCheckedIn ? "bg-green-500 border-green-600" : "bg-muted border-border"
+        isCheckedIn ? "bg-green-500 border-green-600" : 
+        isPastAndMissed ? "bg-destructive border-destructive-foreground" : 
+        isToday ? "border-primary bg-primary/10" : 
+        "bg-muted border-border"
       )}>
         {isCheckedIn && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
+        {isPastAndMissed && <X className="w-4 h-4 sm:w-5 sm:h-5 text-destructive-foreground" />}
+        {!isCheckedIn && !isPastAndMissed && isToday && <span className="text-sm sm:text-base font-semibold text-primary">{format(date, 'd')}</span>}
+        {!isCheckedIn && !isPastAndMissed && !isToday && <span className="text-sm sm:text-base text-muted-foreground">{format(date, 'd')}</span>}
       </div>
-      <span className="text-xs text-muted-foreground mt-0.5">{format(date, 'd')}</span>
+       {!isToday && <span className="text-xs text-muted-foreground mt-0.5">{format(date, 'd')}</span>}
     </div>
   );
 };
 
 
-export default function DailyStreakPage() {
+export default function DashboardPage() {
   const { user, isAuthenticated, isLoadingAuth, recordAdWatchAndCheckIn } = useAuth();
   const router = useRouter();
 
@@ -46,32 +52,33 @@ export default function DailyStreakPage() {
     }
   }, [isLoadingAuth, isAuthenticated, router]);
 
-  // Ad modal progress timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAdModalOpen && !isAdWatchedInModal) {
-      const interval = AD_DURATION_SECONDS * 10; 
+      const totalSteps = AD_DURATION_SECONDS * 20; 
+      const intervalDuration = 1000 / 20; 
+      const progressIncrement = 100 / totalSteps;
+
       timer = setInterval(() => {
         setAdProgress((prev) => {
-          if (prev >= 100) {
+          if (prev >= 100 - progressIncrement) { 
             clearInterval(timer);
             setIsAdWatchedInModal(true);
             return 100;
           }
-          // Calculate increment based on total duration and number of steps
-          return prev + (100 / (AD_DURATION_SECONDS * 1000 / interval));
+          return prev + progressIncrement;
         });
-      }, interval);
+      }, intervalDuration);
     }
     return () => clearInterval(timer);
-  }, [isAdModalOpen, isAdWatchedInModal]);
+  }, [isAdModalOpen, isAdWatchedInModal, AD_DURATION_SECONDS]);
 
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Loading...</p>
+        <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
     );
   }
@@ -89,8 +96,19 @@ export default function DailyStreakPage() {
   };
 
   const today = new Date();
-  const lastSevenDays = Array.from({ length: 7 }, (_, i) => subDays(today, i)).reverse();
-  const userCheckIns = user.dailyCheckIns.map(dateStr => parseISO(dateStr));
+  const dayOfWeek = today.getDay(); 
+  const daysToSubtractForMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+  const mondayThisWeek = subDays(today, daysToSubtractForMonday);
+  const currentWeekDays = Array.from({ length: 7 }, (_, i) => addDays(mondayThisWeek, i));
+  
+  const userCheckIns = user.dailyCheckIns.map(dateStr => {
+    try {
+      const parsedDate = parseISO(dateStr);
+      return isNaN(parsedDate.getTime()) ? null : parsedDate; 
+    } catch (e) {
+      return null; 
+    }
+  }).filter(date => date !== null) as Date[];
 
 
   return (
@@ -100,7 +118,7 @@ export default function DailyStreakPage() {
           <Link href="/home" className="mr-4 p-2 rounded-full hover:bg-black/20 transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </Link>
-          <h1 className="text-2xl font-bold">Daily Streak</h1>
+          <h1 className="text-2xl font-bold text-center flex-1">Dashboard</h1>
         </div>
         <div className="text-center">
           <p className="text-7xl font-extrabold">{user.currentStreak}</p>
@@ -112,13 +130,20 @@ export default function DailyStreakPage() {
       <Card className="mx-2 sm:mx-4 shadow-md">
         <CardContent className="p-4">
           <div className="flex justify-around">
-            {lastSevenDays.map((day) => (
-              <DayIndicator 
-                key={day.toISOString()} 
-                date={day} 
-                isCheckedIn={userCheckIns.some(checkInDate => isSameDay(checkInDate, day))}
-              />
-            ))}
+            {currentWeekDays.map((day) => {
+              const isCheckedIn = userCheckIns.some(checkInDate => isSameDay(checkInDate, day));
+              const isToday = isSameDay(day, today);
+              const isPastAndMissed = isPast(day) && !isToday && !isCheckedIn;
+              return (
+                <DayIndicator 
+                  key={day.toISOString()} 
+                  date={day} 
+                  isCheckedIn={isCheckedIn}
+                  isPastAndMissed={isPastAndMissed}
+                  isToday={isToday}
+                />
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -133,7 +158,7 @@ export default function DailyStreakPage() {
           {AD_REWARDS_TIERED.map((reward, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-card-foreground/5 rounded-lg border border-border">
               <div className="flex items-center space-x-3">
-                <Tv2 className="h-7 w-7 text-primary" />
+                <Tv2 className="h-7 w-7 text-primary" /> 
                 <Coins className="h-6 w-6 text-yellow-400" />
                 <span className="text-lg font-medium text-foreground">+{reward}</span>
               </div>
@@ -154,10 +179,10 @@ export default function DailyStreakPage() {
       </Card>
 
       <Dialog open={isAdModalOpen} onOpenChange={(open) => {
-         if (!open && !isAdWatchedInModal) { // If dialog is closed before ad finishes
-            setIsAdModalOpen(false); // Ensure it closes
-          } else if (!open && isAdWatchedInModal) { // If closed after ad finished (e.g. by clicking outside)
-            handleClaimRewardAndCheckIn(); // Still claim reward
+         if (!open && !isAdWatchedInModal) { 
+            setIsAdModalOpen(false); 
+          } else if (!open && isAdWatchedInModal) { 
+            handleClaimRewardAndCheckIn(); 
           }
       }}>
         <DialogContent className="sm:max-w-[425px] bg-card border-primary/50">
@@ -181,7 +206,7 @@ export default function DailyStreakPage() {
                 </div>
                 <Progress value={adProgress} className="w-full [&>div]:bg-primary" />
                 <p className="text-center text-sm text-muted-foreground">
-                  Time remaining: {Math.max(0, AD_DURATION_SECONDS - Math.floor(adProgress / (100/AD_DURATION_SECONDS)))}s
+                   Time remaining: {Math.max(0, AD_DURATION_SECONDS - Math.floor(AD_DURATION_SECONDS * (adProgress/100)) )}s
                 </p>
               </>
             )}
@@ -199,9 +224,6 @@ export default function DailyStreakPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
-
-    
