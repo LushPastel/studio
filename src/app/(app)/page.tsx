@@ -4,50 +4,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { Hourglass, Tv2, Coins, CheckCircle, X } from 'lucide-react';
+import { ArrowLeft, Hourglass, Tv2, Coins, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
-// import Link from 'next/link'; // Link to /home removed from header
+import Link from 'next/link';
 import { AD_REWARDS_TIERED, MAX_ADS_PER_DAY, AD_DURATION_SECONDS } from '@/lib/constants';
-import { format, parseISO, isSameDay, isPast, addDays, subDays, isValid } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { isValid, parseISO, isSameDay } from 'date-fns'; // Removed unused date-fns imports for calendar
 
-const DayIndicator = ({ date, isCheckedIn, isPastAndMissed, isToday }: { date: Date; isCheckedIn: boolean; isPastAndMissed: boolean; isToday: boolean; }) => {
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-xs text-muted-foreground">{format(date, 'EEE')}</span>
-      <div className={cn(
-        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 mt-1",
-        isCheckedIn ? "bg-green-500 border-green-600" :
-        isPastAndMissed ? "bg-destructive border-destructive" :
-        isToday ? "border-primary bg-transparent" :
-        "border-border bg-transparent" // Future days
-      )}>
-        {isCheckedIn && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
-        {isPastAndMissed && <X className="w-4 h-4 sm:w-5 sm:h-5 text-destructive-foreground" />}
-        {!isCheckedIn && !isPastAndMissed && isToday && ( /* Today, not checked/missed */
-          <span className="text-sm font-semibold text-primary">{format(date, 'd')}</span>
-        )}
-         {!isCheckedIn && !isPastAndMissed && !isToday && ( /* Future day, not checked/missed */
-          <span className="text-sm text-muted-foreground">{format(date, 'd')}</span>
-        )}
-      </div>
-      {/* Display day number below the circle only if it's not already inside the circle (for today) */}
-      {!(isToday && !isCheckedIn && !isPastAndMissed) && (
-         <span className="text-xs text-muted-foreground mt-0.5">{format(date, 'd')}</span>
-      )}
-       {(isToday && !isCheckedIn && !isPastAndMissed) && ( // add placeholder to maintain height for today's non-circled number
-         <span className="text-xs text-transparent mt-0.5 select-none">{format(date, 'd')}</span>
-      )}
-    </div>
-  );
-};
-
-
-export default function DailyLogPage() { // Renamed component for clarity, though file is page.tsx
+export default function DailyStreakPage() {
   const { user, isAuthenticated, isLoadingAuth, recordAdWatchAndCheckIn } = useAuth();
   const router = useRouter();
 
@@ -62,12 +29,11 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
     }
   }, [isLoadingAuth, isAuthenticated, router]);
 
-  // Ad modal progress timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAdModalOpen && !isAdWatchedInModal) {
-      const totalSteps = AD_DURATION_SECONDS * 20; // e.g., 100 steps for 5 seconds (20 steps per second)
-      const intervalDuration = 1000 / 20; // 50ms interval for smoother progress
+      const totalSteps = AD_DURATION_SECONDS * 20; 
+      const intervalDuration = 1000 / 20; 
       const progressIncrement = 100 / totalSteps;
 
       timer = setInterval(() => {
@@ -106,26 +72,13 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
     setIsAdModalOpen(false);
   };
 
-  const today = new Date();
-  // Explicitly calculate Monday of the current week
-  // getDay() returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday
-  const dayOfWeek = today.getDay();
-  // Calculate days to subtract to get to Monday.
-  // If today is Sunday (0), Monday was 6 days ago (relative to Sunday, so it's the start of the week).
-  // If today is Monday (1), 0 days ago.
-  const daysToSubtractForMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
-  const mondayThisWeek = subDays(today, daysToSubtractForMonday);
-
-  // Generate the 7 days of the current week starting from Monday
-  const currentWeekDays = Array.from({ length: 7 }, (_, i) => addDays(mondayThisWeek, i));
-
+  // Ensure dailyCheckIns are valid dates for any other potential use, though not directly used in this new layout
   const userCheckIns = user.dailyCheckIns.map(dateStr => {
     try {
       const parsedDate = parseISO(dateStr);
-      // Check if date is valid
       return isValid(parsedDate) ? parsedDate : null;
     } catch (e) {
-      return null; // Handle invalid date strings gracefully
+      return null;
     }
   }).filter(date => date !== null) as Date[];
 
@@ -134,8 +87,10 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
     <div className="space-y-6 pb-16">
       <div className="bg-primary text-primary-foreground p-6 rounded-b-xl shadow-lg">
         <div className="flex items-center mb-4">
-          {/* Back arrow Link to /home removed as this is now the primary app page */}
-          <h1 className="text-2xl font-bold text-center w-full">Daily Log</h1>
+          <Link href="/home" className="mr-4 p-2 rounded-full hover:bg-black/20 transition-colors">
+            <ArrowLeft className="h-6 w-6" />
+          </Link>
+          <h1 className="text-2xl font-bold">Daily Streak</h1>
         </div>
         <div className="text-center">
           <p className="text-7xl font-extrabold">{user.currentStreak}</p>
@@ -143,29 +98,8 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
           <p className="text-sm opacity-80 mt-1">Extend your streak to unlock new rewards! Way to go!</p>
         </div>
       </div>
-
-      <Card className="mx-2 sm:mx-4 shadow-md">
-        <CardContent className="p-4">
-          <div className="flex justify-around">
-            {currentWeekDays.map((day) => {
-              const isCheckedIn = userCheckIns.some(checkInDate => isSameDay(checkInDate, day));
-              // A day is missed if it's in the past (but not today) AND not checked in.
-              const isPastAndMissed = isPast(day) && !isSameDay(day, today) && !isCheckedIn;
-              const isTodayFlag = isSameDay(day, today);
-              return (
-                <DayIndicator
-                  key={day.toISOString()}
-                  date={day}
-                  isCheckedIn={isCheckedIn}
-                  isPastAndMissed={isPastAndMissed}
-                  isToday={isTodayFlag}
-                />
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
+      
+      {/* Calendar Card is removed as per new design */}
 
       <Card className="mx-2 sm:mx-4 shadow-md">
         <CardHeader>
@@ -176,7 +110,7 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
           {AD_REWARDS_TIERED.map((reward, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-card-foreground/5 rounded-lg border border-border">
               <div className="flex items-center space-x-3">
-                <Tv2 className="h-7 w-7 text-primary" />
+                <Tv2 className="h-7 w-7 text-primary" /> 
                 <Coins className="h-6 w-6 text-yellow-400" />
                 <span className="text-lg font-medium text-foreground">+{reward}</span>
               </div>
@@ -197,10 +131,10 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
       </Card>
 
       <Dialog open={isAdModalOpen} onOpenChange={(open) => {
-         if (!open && !isAdWatchedInModal) { // If dialog is closed before ad finishes
-            setIsAdModalOpen(false); // Ensure it closes
-          } else if (!open && isAdWatchedInModal) { // If closed after ad finished (e.g. by clicking outside)
-            handleClaimRewardAndCheckIn(); // Still claim reward
+         if (!open && !isAdWatchedInModal) { 
+            setIsAdModalOpen(false); 
+          } else if (!open && isAdWatchedInModal) { 
+            handleClaimRewardAndCheckIn(); 
           }
       }}>
         <DialogContent className="sm:max-w-[425px] bg-card border-primary/50">
@@ -246,3 +180,5 @@ export default function DailyLogPage() { // Renamed component for clarity, thoug
     </div>
   );
 }
+
+    
