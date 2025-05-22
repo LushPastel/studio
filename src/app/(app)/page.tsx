@@ -23,7 +23,7 @@ const DayIndicator = ({ date, isCheckedIn, isPastAndMissed, isToday }: { date: D
         "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 mt-1",
         isCheckedIn ? "bg-green-500 border-green-600" :
         isPastAndMissed ? "bg-destructive border-destructive" :
-        isToday ? "border-primary bg-transparent" : 
+        isToday ? "border-primary bg-transparent" :
         "border-border bg-transparent" // Future days
       )}>
         {isCheckedIn && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
@@ -47,7 +47,7 @@ const DayIndicator = ({ date, isCheckedIn, isPastAndMissed, isToday }: { date: D
 };
 
 
-export default function DailyStreakPage() {
+export default function DailyLogPage() { // Renamed component for clarity, though file is page.tsx
   const { user, isAuthenticated, isLoadingAuth, recordAdWatchAndCheckIn } = useAuth();
   const router = useRouter();
 
@@ -72,7 +72,7 @@ export default function DailyStreakPage() {
 
       timer = setInterval(() => {
         setAdProgress((prev) => {
-          if (prev >= 100 - progressIncrement) { 
+          if (prev >= 100 - progressIncrement) {
             clearInterval(timer);
             setIsAdWatchedInModal(true);
             return 100;
@@ -109,8 +109,8 @@ export default function DailyStreakPage() {
   const today = new Date();
   // Explicitly calculate Monday of the current week
   // getDay() returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday
-  const dayOfWeek = today.getDay(); 
-  // Calculate days to subtract to get to Monday. 
+  const dayOfWeek = today.getDay();
+  // Calculate days to subtract to get to Monday.
   // If today is Sunday (0), Monday was 6 days ago (relative to Sunday, so it's the start of the week).
   // If today is Monday (1), 0 days ago.
   const daysToSubtractForMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
@@ -118,7 +118,7 @@ export default function DailyStreakPage() {
 
   // Generate the 7 days of the current week starting from Monday
   const currentWeekDays = Array.from({ length: 7 }, (_, i) => addDays(mondayThisWeek, i));
-  
+
   const userCheckIns = user.dailyCheckIns.map(dateStr => {
     try {
       const parsedDate = parseISO(dateStr);
@@ -135,7 +135,7 @@ export default function DailyStreakPage() {
       <div className="bg-primary text-primary-foreground p-6 rounded-b-xl shadow-lg">
         <div className="flex items-center mb-4">
           {/* Back arrow Link to /home removed as this is now the primary app page */}
-          <h1 className="text-2xl font-bold text-center w-full">Daily Streak</h1>
+          <h1 className="text-2xl font-bold text-center w-full">Daily Log</h1>
         </div>
         <div className="text-center">
           <p className="text-7xl font-extrabold">{user.currentStreak}</p>
@@ -143,7 +143,7 @@ export default function DailyStreakPage() {
           <p className="text-sm opacity-80 mt-1">Extend your streak to unlock new rewards! Way to go!</p>
         </div>
       </div>
-      
+
       <Card className="mx-2 sm:mx-4 shadow-md">
         <CardContent className="p-4">
           <div className="flex justify-around">
@@ -153,9 +153,9 @@ export default function DailyStreakPage() {
               const isPastAndMissed = isPast(day) && !isSameDay(day, today) && !isCheckedIn;
               const isTodayFlag = isSameDay(day, today);
               return (
-                <DayIndicator 
-                  key={day.toISOString()} 
-                  date={day} 
+                <DayIndicator
+                  key={day.toISOString()}
+                  date={day}
                   isCheckedIn={isCheckedIn}
                   isPastAndMissed={isPastAndMissed}
                   isToday={isTodayFlag}
@@ -246,4 +246,3 @@ export default function DailyStreakPage() {
     </div>
   );
 }
-

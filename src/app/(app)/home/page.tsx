@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
 import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard';
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
-import { SpecialBonusAdCard } from '@/components/home/SpecialBonusAdCard'; 
+import { SpecialBonusAdCard } from '@/components/home/SpecialBonusAdCard';
 import { useToast } from '@/hooks/use-toast';
 import { APP_NAME } from '@/lib/constants';
 
@@ -83,9 +83,9 @@ export default function HomePage() {
         <h3 className="text-2xl font-semibold tracking-tight text-foreground">Dash & Cash</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <QuickActionCard
-            title="Daily Ads & Streak"
-            description="Watch daily ads, earn rewards, and build your streak."
-            href="/" 
+            title="Daily Log"
+            description="View your streak calendar"
+            href="/"
             className="bg-card hover:bg-muted/50"
             iconType="dashboard"
           />
@@ -186,10 +186,10 @@ export default function HomePage() {
 
       <Separator />
 
-      <section className="space-y-4">
+       <section className="space-y-4">
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Bonus Offers</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-           <SpecialBonusAdCard /> 
+           <SpecialBonusAdCard />
            <OfferCard
             title="Rate Us"
             subtitle={user?.hasRatedApp ? "Bonus Claimed! Thanks for your support." : `Enjoying ${APP_NAME}? Rate us 5 Stars & get 20 coins!`}
