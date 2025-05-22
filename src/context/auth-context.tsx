@@ -17,9 +17,9 @@ import {
 import { format, subDays, parseISO, isValid, isSameDay } from 'date-fns';
 
 // Constants for localStorage keys
-const LS_USERS_KEY = 'cashquery-users';
-const LS_CURRENT_USER_ID_KEY = 'cashquery-current-user-id';
-const LS_WITHDRAWAL_HISTORY_PREFIX = 'cashquery-withdrawal-';
+const LS_USERS_KEY = 'cashwhiz-users'; // Updated app name
+const LS_CURRENT_USER_ID_KEY = 'cashwhiz-current-user-id'; // Updated app name
+const LS_WITHDRAWAL_HISTORY_PREFIX = 'cashwhiz-withdrawal-'; // Updated app name
 
 interface NotificationPreferences {
   offers: boolean;
@@ -420,17 +420,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    // Update applicant (current user)
     const applicantNewBalance = parseFloat(((currentUserData.balance || 0) + REFERRAL_BONUS).toFixed(2));
-    const applicantNewCoins = (currentUserData.coins || 0) + REFERRAL_BONUS;
-    const applicantUpdatedFields: Partial<User> = { balance: applicantNewBalance, coins: applicantNewCoins, hasAppliedReferral: true };
+    const applicantNewCoins = (currentUserData.coins || 0) + REFERRAL_BONUS; // Applying coin bonus as well
+    const applicantUpdatedFields: Partial<User> = { 
+      balance: applicantNewBalance, 
+      coins: applicantNewCoins, 
+      hasAppliedReferral: true 
+    };
     
     setUser(prevUser => prevUser ? { ...prevUser, ...applicantUpdatedFields } : null);
     updateUserInStorage(currentUserData.id, applicantUpdatedFields);
     allUsers = getAllUsers(); // Re-fetch after own update
 
+    // Update referrer
     let referrer = allUsers[referrerIndex];
     referrer.balance = parseFloat(((referrer.balance || 0) + REFERRAL_BONUS).toFixed(2));
-    referrer.coins = (referrer.coins || 0) + REFERRAL_BONUS;
+    referrer.coins = (referrer.coins || 0) + REFERRAL_BONUS; // Applying coin bonus as well
     referrer.referralsMade = (referrer.referralsMade || 0) + 1;
     allUsers[referrerIndex] = referrer;
     saveAllUsers(allUsers);
@@ -480,14 +486,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
         googleUser = initializeUserFields(googleUser); // Ensure all fields are present
         googleUser.photoURL = googleUser.photoURL || mockGoogleUserPhotoURL;
-        googleUser.password = googleUser.password || "mockpassword";
+        googleUser.password = googleUser.password || "mockpassword"; // Ensure password exists
         updateUserInStorage(googleUser.id, googleUser);
     }
-    await login(googleUser.email, googleUser.password!);
+    await login(googleUser.email, googleUser.password!); // Use the (potentially newly set) password
     toast({ title: "Signed in with Google (Simulated)" });
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
+    if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+        // This block is for when a live API is configured, indicating we should not use localStorage directly
+        console.warn("getAllUsersForLeaderboard called while API_BASE_URL is configured. Leaderboard should fetch from API.");
+        return []; // Or throw an error, or return some default if API isn't ready
+    }
+    // Fallback to localStorage if API_BASE_URL is the placeholder
     const users = getAllUsers();
     return users.map(u => initializeUserFields(u));
   };

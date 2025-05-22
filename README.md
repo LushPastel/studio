@@ -1,6 +1,7 @@
-# CashQuery App
 
-This is a Next.js project for CashQuery, an app to earn rewards.
+# CashWhiz App
+
+This is a Next.js project for CashWhiz, an app to earn rewards.
 
 ## Getting Started
 

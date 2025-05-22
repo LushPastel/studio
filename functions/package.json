@@ -1,6 +1,7 @@
+
 {
-  "name": "cashquery-functions",
-  "description": "Cloud Functions for CashQuery App",
+  "name": "cashwhiz-functions",
+  "description": "Cloud Functions for CashWhiz App",
   "main": "index.js",
   "engines": {
     "node": "18"

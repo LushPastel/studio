@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect } from 'react'; // Ensure React is imported
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react';
