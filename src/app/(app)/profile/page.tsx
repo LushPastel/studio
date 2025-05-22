@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_SUBJECT } from '@/lib/constants';
 
 interface ProfileListItemProps {
   icon: React.ElementType;
@@ -63,7 +64,7 @@ export default function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (isLoggingOut) return; // Prevent redirect loop while logging out
+    if (isLoggingOut) return; 
     if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
@@ -72,7 +73,14 @@ export default function ProfilePage() {
   const handleLogout = () => {
     setIsLoggingOut(true);
     logout();
-    router.push('/login'); // Ensure redirection happens after logout call
+    router.push('/login'); 
+  };
+
+  const handleGetHelp = () => {
+    const mailtoLink = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(SUPPORT_EMAIL_SUBJECT)}`;
+    if (typeof window !== "undefined") {
+      window.location.href = mailtoLink;
+    }
   };
 
   const handleCopyReferralCode = () => {
@@ -82,20 +90,20 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoggingOut) {
-     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Hourglass className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-foreground">Logging out...</p>
-      </div>
-    );
-  }
-
   if (isLoadingAuth || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-lg text-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (isLoggingOut) {
+     return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+        <Hourglass className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-foreground">Logging out...</p>
       </div>
     );
   }
@@ -114,12 +122,14 @@ export default function ProfilePage() {
         </Avatar>
         <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
         <p className="text-sm text-muted-foreground">{user.email}</p>
-        <div className="flex items-center space-x-2 p-2 border border-dashed border-primary/50 rounded-md bg-muted/20 max-w-xs w-full">
-          <span className="text-xs font-mono text-primary truncate flex-1 text-center">{user.referralCode}</span>
-          <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} className="text-primary hover:bg-primary/10 h-7 w-7">
-            <Copy className="h-4 w-4" />
-          </Button>
-        </div>
+        {user.referralCode && (
+          <div className="flex items-center space-x-2 p-2 border border-dashed border-primary/50 rounded-md bg-muted/20 max-w-xs w-full">
+            <span className="text-xs font-mono text-primary truncate flex-1 text-center">{user.referralCode}</span>
+            <Button variant="ghost" size="icon" onClick={handleCopyReferralCode} className="text-primary hover:bg-primary/10 h-7 w-7">
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <Separator className="my-4" />
@@ -131,7 +141,7 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={History} text="Reward History" href="/wallet" />
         <Separator />
-        <ProfileListItem icon={HelpCircle} text="Get Help" onClick={() => toast({ title: "Coming Soon", description: "Help & Support section will be available soon."})} />
+        <ProfileListItem icon={HelpCircle} text="Get Help" onClick={handleGetHelp} />
         <Separator />
         <ProfileListItem icon={FileText} text="Terms and Conditions" onClick={() => toast({ title: "Coming Soon", description: "Terms & Conditions will be available soon."})} />
         <Separator />

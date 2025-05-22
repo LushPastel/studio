@@ -2,6 +2,8 @@
 export const MIN_WITHDRAWAL_AMOUNT = 100; // ₹100
 export const REFERRAL_BONUS = 5; // ₹5 for both referrer and new user
 export const APP_NAME = "CashQuery";
+export const SUPPORT_EMAIL = "support@cashquery.app";
+export const SUPPORT_EMAIL_SUBJECT = "CashQuery App Support Request";
 
 // Placeholder for your actual API base URL if you deploy a backend
 // This should be replaced if you connect to a live backend.
