@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { APP_NAME, SUPPORT_EMAIL } from '@/lib/constants';
+import { APP_NAME, SUPPORT_EMAIL, MIN_WITHDRAWAL_AMOUNT } from '@/lib/constants';
 
 export default function TermsAndConditionsPage() {
   return (
@@ -78,7 +78,7 @@ export default function TermsAndConditionsPage() {
 
             <h2 className="font-semibold text-lg text-foreground">13. Contact</h2>
             <p>For support or questions:</p>
-            <p>📧 <a href={`mailto:${SUPPORT_EMAIL}`} className="text-accent hover:underline">{SUPPORT_EMAIL}</a></p>
+            <p>📧 <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(APP_NAME + ' Support')}`} className="text-accent hover:underline">{SUPPORT_EMAIL}</a></p>
           </CardContent>
         </Card>
       </div>
