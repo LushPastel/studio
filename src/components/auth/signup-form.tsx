@@ -71,7 +71,6 @@ export function SignupForm() {
     if (signupSuccess) {
       router.push('/home');
     } else {
-      // Error toast is handled in AuthContext
       form.resetField("password");
       form.resetField("confirmPassword");
     }
@@ -81,7 +80,6 @@ export function SignupForm() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     await googleSignIn();
-    // googleSignIn in AuthContext handles routing on success
     setIsLoading(false);
   };
 
@@ -198,8 +196,8 @@ export function SignupForm() {
                   <div className="space-y-1 leading-none">
                     <FormLabel className="text-sm font-normal text-foreground/80">
                       I agree to the{' '}
-                      <Link href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:text-accent/80 underline">
-                        Terms & Conditions
+                      <Link href="/terms-and-conditions" className="font-medium text-accent hover:text-accent/80 underline">
+                        Terms &amp; Conditions
                       </Link>
                       .
                     </FormLabel>
