@@ -32,12 +32,6 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const FacebookIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="mr-2 h-5 w-5">
-    <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z" fill="#1877F2"/>
-  </svg>
-);
-
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
@@ -62,18 +56,18 @@ export function LoginForm() {
     const success = await login(values.email, values.password);
     setIsLoading(false);
     if (success) {
-      router.push('/home'); 
+      router.push('/home');
     } else {
       form.setError("password", { type: "manual", message: "Login failed. Check credentials." });
       form.resetField("password");
     }
   }
-  
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     await googleSignIn();
     // googleSignIn in AuthContext handles routing on success
-    setIsLoading(false); 
+    setIsLoading(false);
   };
 
   return (
@@ -156,10 +150,6 @@ export function LoginForm() {
           <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
             <GoogleIcon />
             Continue with Google
-          </Button>
-          <Button variant="outline" type="button" className="w-full" disabled>
-            <FacebookIcon />
-            Continue with Facebook
           </Button>
         </div>
 
