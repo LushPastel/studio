@@ -9,14 +9,10 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          {/* Heuristic: Assume users might access this from profile or signup, provide a generic back or a way to go home */}
+          {/* Heuristic: Assume users might access this from profile, provide a way to go back to profile */}
           <Link href="/profile" className="flex items-center text-sm text-primary hover:underline mb-2">
             <ChevronLeft className="h-5 w-5 mr-1" />
             Back to Profile
-          </Link>
-           <Link href="/signup" className="flex items-center text-sm text-primary hover:underline">
-            <ChevronLeft className="h-5 w-5 mr-1" />
-            Back to Signup
           </Link>
         </div>
         <Card className="shadow-lg border-primary/20">
