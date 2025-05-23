@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Coins } from 'lucide-react';
+import { Wand2, Coins } from 'lucide-react'; // Changed TvMinimalPlayIcon to Wand2
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/constants';
@@ -10,8 +10,6 @@ import { APP_NAME } from '@/lib/constants';
 export function AppHeader() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   
-  // Show minimal header if loading auth or if not authenticated and user is null
-  // (user might be null briefly even if authenticated, before data loads)
   const showMinimalHeader = isLoadingAuth || (!isAuthenticated && user === null);
 
   if (showMinimalHeader) {
@@ -19,13 +17,13 @@ export function AppHeader() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-16">
         <div className="container mx-auto flex h-full items-center justify-between px-4 md:px-6">
           <Link
-            href="/home" // Link to /home for minimal header as well
+            href="/home" 
             className={cn(
               "flex items-center space-x-2 text-primary",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
             )}
           >
-            <Coins className="h-7 w-7" />
+            <Wand2 className="h-7 w-7" /> {/* Changed Icon */}
             <span className="font-bold text-xl tracking-tighter sm:inline-block">
               {APP_NAME}
             </span>
@@ -40,13 +38,13 @@ export function AppHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link
-          href="/home" // App logo links to /home
+          href="/home" 
           className={cn(
             "flex items-center space-x-2 text-primary",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
           )}
         >
-          <Coins className="h-7 w-7" />
+          <Wand2 className="h-7 w-7" /> {/* Changed Icon */}
           <span className="font-bold text-xl tracking-tighter sm:inline-block">
             {APP_NAME}
           </span>
