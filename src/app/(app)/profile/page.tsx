@@ -92,7 +92,7 @@ export default function ProfilePage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
   if (isLoggingOut) {
      return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-lg text-foreground">Logging out...</p>
       </div>
@@ -145,7 +145,7 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={FileText} text="Terms and Conditions" href="/terms-and-conditions" />
         <Separator />
-        <ProfileListItem icon={ShieldCheck} text="Privacy Policy" onClick={() => toast({ title: "Coming Soon", description: "Privacy Policy will be available soon."})} />
+        <ProfileListItem icon={ShieldCheck} text="Privacy Policy" href="/privacy-policy" />
         <Separator />
         <ProfileListItem icon={LogOut} text="Log Out" onClick={handleLogout} isDestructive />
       </div>
