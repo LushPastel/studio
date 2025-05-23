@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/context/auth-context';
+import { useAuth } from '@/context/auth-context'; // For fetching local users
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -62,7 +62,7 @@ export function LeaderboardTable() {
       // setLeaderboardData(sortedUsers);
     }
 
-  }, [getAllUsersForLeaderboard, currentUser]); 
+  }, [getAllUsersForLeaderboard, currentUser]); // currentUser dependency to re-highlight if user changes
 
   if (isLoading) {
     return (
@@ -132,3 +132,4 @@ export function LeaderboardTable() {
     </ScrollArea>
   );
 }
+

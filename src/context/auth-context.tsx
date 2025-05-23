@@ -32,7 +32,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  password?: string;
+  password?: string; // Only present when getting all users, not on the 'user' state object
   balance: number;
   coins: number;
   referralCode: string;
@@ -50,7 +50,7 @@ interface User {
   lastStreakUpdate: string;
   adsWatchedToday: number;
   lastAdWatchDate: string;
-  dailyCheckIns: string[];
+  dailyCheckIns: string[]; // Array of YYYY-MM-DD strings
   specialBonusAdsWatched: number;
   specialBonusCompleted: boolean;
 }
@@ -78,7 +78,7 @@ interface AuthContextType {
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password'>>) => boolean;
   googleSignIn: () => Promise<void>;
-  getAllUsersForLeaderboard: () => User[];
+  getAllUsersForLeaderboard: () => User[]; // For local leaderboard
   recordAdWatchAndCheckIn: () => Promise<boolean>;
   recordSpecialBonusAdWatch: () => Promise<boolean>;
 }
@@ -89,24 +89,32 @@ const generateReferralCode = () => `${APP_NAME.toUpperCase().substring(0,4)}${Ma
 const todayISOString = () => format(new Date(), 'yyyy-MM-dd');
 const yesterdayISOString = () => format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
+// Helper to get all users from localStorage
 const getAllUsers = (): User[] => {
   if (typeof window === 'undefined') return [];
   try {
     const storedUsers = localStorage.getItem(LS_USERS_KEY);
     return storedUsers ? JSON.parse(storedUsers) : [];
   } catch (error) {
-    console.error("Error accessing localStorage:", error);
+    console.error("Error accessing localStorage for all users:", error);
     return [];
   }
 };
 
+// Helper to save all users to localStorage
 const saveAllUsers = (users: User[]) => {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
   } catch (error) {
-    console.error("Error saving to localStorage:", error);
+    console.error("Error saving all users to localStorage:", error);
   }
+};
+
+// Helper to get a specific user (including password) from localStorage
+const getFullUserFromStorage = (userId: string): User | undefined => {
+  const users = getAllUsers();
+  return users.find(u => u.id === userId);
 };
 
 
@@ -138,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastStreakUpdate: userData.lastStreakUpdate || "",
       adsWatchedToday: Number(userData.adsWatchedToday) || 0,
       lastAdWatchDate: userData.lastAdWatchDate || "",
-      dailyCheckIns: Array.isArray(userData.dailyCheckIns) ? userData.dailyCheckIns.filter(d => typeof d === 'string') : [],
+      dailyCheckIns: Array.isArray(userData.dailyCheckIns) ? userData.dailyCheckIns.filter((d): d is string => typeof d === 'string' && isValid(parseISO(d))) : [],
       specialBonusAdsWatched: Number(userData.specialBonusAdsWatched) || 0,
       specialBonusCompleted: !!userData.specialBonusCompleted,
     };
@@ -149,49 +157,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoadingAuth(false);
       return;
     }
-    let loggedInUser: User | undefined;
+    let loggedInUserRaw: User | undefined;
     try {
       const currentUserId = localStorage.getItem(LS_CURRENT_USER_ID_KEY);
       
       if (currentUserId) {
-        const users = getAllUsers();
-        const rawUser = users.find(u => u.id === currentUserId);
-        if (rawUser) {
-          loggedInUser = initializeUserFields(rawUser);
+        loggedInUserRaw = getFullUserFromStorage(currentUserId);
+        
+        if (loggedInUserRaw) {
+          let userToSet = initializeUserFields(loggedInUserRaw);
 
           const today = todayISOString();
           const yesterday = yesterdayISOString();
 
-          if (loggedInUser.lastAdWatchDate !== today) {
-            loggedInUser.adsWatchedToday = 0;
+          if (userToSet.lastAdWatchDate !== today) {
+            userToSet.adsWatchedToday = 0;
           }
-          if (loggedInUser.lastStreakUpdate !== today && loggedInUser.lastStreakUpdate !== yesterday) {
-            loggedInUser.currentStreak = 0;
+          if (userToSet.lastStreakUpdate !== today && userToSet.lastStreakUpdate !== yesterday) {
+            userToSet.currentStreak = 0;
           }
-          loggedInUser.dailyCheckIns = loggedInUser.dailyCheckIns
-            .map(dateStr => {
-              try { return isValid(parseISO(dateStr)) ? dateStr : null; } catch { return null; }
-            })
-            .filter(dateStr => dateStr !== null)
-            .sort((a, b) => b!.localeCompare(a!))
-            .slice(0, 7) as string[];
+          // Ensure dailyCheckIns are valid dates and sorted
+          userToSet.dailyCheckIns = userToSet.dailyCheckIns
+            .filter(dateStr => { try { return isValid(parseISO(dateStr)); } catch { return false; }})
+            .sort((a,b) => b.localeCompare(a)) // newest first
+            .slice(0, 7); // keep only last 7
 
-          const userIndex = users.findIndex(u => u.id === loggedInUser!.id);
-          if (userIndex !== -1) {
-            users[userIndex] = loggedInUser; // Save potentially updated streak/ad data
-            saveAllUsers(users);
-          }
-
-
-          const { password, ...userWithoutPassword } = loggedInUser;
-          setUser(userWithoutPassword as User);
+          const { password, ...userWithoutPassword } = userToSet; // Remove password for state
+          setUser(userWithoutPassword);
           setIsAuthenticated(true);
-          const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${loggedInUser.id}`);
+          const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${userToSet.id}`);
           if (storedHistory) {
             setWithdrawalHistory(JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })));
           }
+          // Save potentially updated streak/ad data back to localStorage
+          updateUserInStorage(userToSet.id, userToSet); 
         } else {
-          localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
+          localStorage.removeItem(LS_CURRENT_USER_ID_KEY); // Clean up if user ID is stale
         }
       }
     } catch (error) {
@@ -223,9 +224,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     let newUser: User = {
       id: `user-${Date.now()}`,
-      email,
+      email: email.toLowerCase(),
       name,
-      password: passwordInput,
+      password: passwordInput, // Storing password in LS for prototype
       balance: 0,
       coins: 0,
       referralCode: generateReferralCode(),
@@ -251,8 +252,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     allUsers.push(newUser);
     saveAllUsers(allUsers);
 
-    const { password, ...userToSet } = newUser;
-    setUser(userToSet as User);
+    const { password, ...userToSet } = newUser; // Don't keep password in React state
+    setUser(userToSet);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, newUser.id);
@@ -271,7 +272,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Login Failed", description: "Email not found. Please sign up." });
       return false;
     }
-    if (rawFoundUser.password !== passwordInput) {
+    if (rawFoundUser.password !== passwordInput) { // Comparing plain text passwords (prototype only)
       toast({ variant: "destructive", title: "Login Failed", description: "Incorrect password." });
       return false;
     }
@@ -287,15 +288,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (userToLogin.lastStreakUpdate !== today && userToLogin.lastStreakUpdate !== yesterday) {
         userToLogin.currentStreak = 0;
     }
-     userToLogin.dailyCheckIns = userToLogin.dailyCheckIns
-        .map(dateStr => {
-            try { return isValid(parseISO(dateStr)) ? dateStr : null; } catch { return null; }
-        })
-        .filter(dateStr => dateStr !== null)
-        .sort((a,b) => b!.localeCompare(a!))
-        .slice(0, 7) as string[];
+    userToLogin.dailyCheckIns = userToLogin.dailyCheckIns
+        .filter(dateStr => { try { return isValid(parseISO(dateStr)); } catch { return false; }})
+        .sort((a,b) => b.localeCompare(a))
+        .slice(0, 7);
 
-    updateUserInStorage(userToLogin.id, {
+    updateUserInStorage(userToLogin.id, { // Save potentially updated streak/ad data
         adsWatchedToday: userToLogin.adsWatchedToday,
         currentStreak: userToLogin.currentStreak,
         dailyCheckIns: userToLogin.dailyCheckIns,
@@ -303,8 +301,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         lastStreakUpdate: userToLogin.lastStreakUpdate,
     });
     
-    const { password, ...userForState } = userToLogin;
-    setUser(userForState as User);
+    const { password, ...userForState } = userToLogin; // Remove password for state
+    setUser(userForState);
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, userToLogin.id);
@@ -325,15 +323,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addBalance = (amount: number) => {
+  const addBalance = (amount: number) => { // For real money balance
     if (!user) return;
-    const newBalance = parseFloat((user.balance + amount).toFixed(2));
-    const updatedUserForState = { ...user, balance: newBalance };
-    setUser(updatedUserForState);
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) return;
+
+    const newBalance = parseFloat((currentUserData.balance + amount).toFixed(2));
+    setUser(prevUser => prevUser ? { ...prevUser, balance: newBalance } : null);
     updateUserInStorage(user.id, { balance: newBalance });
   };
 
-  const addCoins = (amount: number): boolean => {
+  const addCoins = (amount: number): boolean => { // For in-app currency
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "User not logged in." });
       return false;
@@ -405,7 +405,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply a referral code." });
       return false;
     }
-    const currentUserData = getFullUserFromStorage(user.id);
+    const currentUserData = getFullUserFromStorage(user.id); // Get full data for current user
     if (!currentUserData || currentUserData.hasAppliedReferral) {
       toast({ variant: "destructive", title: "Referral Failed", description: "You have already applied a referral bonus or user data is missing." });
       return false;
@@ -430,18 +430,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setUser(prevUser => prevUser ? { ...prevUser, ...applicantUpdatedFields } : null);
-    updateUserInStorage(currentUserData.id, applicantUpdatedFields);
-    allUsers = getAllUsers(); // Re-fetch after own update
+    updateUserInStorage(currentUserData.id, applicantUpdatedFields); // Save applicant changes
+    
+    allUsers = getAllUsers(); // Re-fetch all users after applicant's update
 
     // Update referrer
-    let referrer = allUsers[referrerIndex];
+    let referrer = allUsers[referrerIndex]; // Get fresh referrer data
     referrer.balance = parseFloat(((referrer.balance || 0) + REFERRAL_BONUS).toFixed(2));
     referrer.coins = (referrer.coins || 0) + REFERRAL_BONUS; // Applying coin bonus as well
     referrer.referralsMade = (referrer.referralsMade || 0) + 1;
-    allUsers[referrerIndex] = referrer;
-    saveAllUsers(allUsers);
+    updateUserInStorage(referrer.id, { balance: referrer.balance, coins: referrer.coins, referralsMade: referrer.referralsMade }); // Save referrer changes
 
-    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} bonus and ${REFERRAL_BONUS} coins!` });
+    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} balance bonus and ${REFERRAL_BONUS} coins!` });
     return true;
   };
 
@@ -454,8 +454,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!currentUserData) return false;
     
     const updatedUser = { ...currentUserData, ...updatedDetails };
-    setUser(updatedUser);
-    updateUserInStorage(user.id, updatedUser);
+    const { password, ...userForState } = updatedUser; // Remove password before setting to state
+    setUser(userForState);
+    updateUserInStorage(user.id, updatedUser); // Store full user data including password if it exists
     return true;
   };
 
@@ -465,10 +466,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const mockGoogleUserPhotoURL = "https://placehold.co/100x100/E0E0E0/333333?text=G";
 
     let allUsers = getAllUsers();
-    let googleUser = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
+    let googleUserRaw = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
 
-    if (!googleUser) {
-      googleUser = initializeUserFields({
+    if (!googleUserRaw) {
+      const newGoogleUser: User = {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
@@ -480,28 +481,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
         claimedReferralTiers: [], currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0,
         lastAdWatchDate: "", dailyCheckIns: [], specialBonusAdsWatched: 0, specialBonusCompleted: false,
-      });
-      allUsers.push(googleUser);
+      };
+      allUsers.push(newGoogleUser);
       saveAllUsers(allUsers);
+      googleUserRaw = newGoogleUser;
     } else {
-        googleUser = initializeUserFields(googleUser); // Ensure all fields are present
-        googleUser.photoURL = googleUser.photoURL || mockGoogleUserPhotoURL;
-        googleUser.password = googleUser.password || "mockpassword"; // Ensure password exists
-        updateUserInStorage(googleUser.id, googleUser);
+        // Ensure existing "Google user" has photoURL and password for login
+        let updatedGoogleUser = initializeUserFields(googleUserRaw);
+        updatedGoogleUser.photoURL = updatedGoogleUser.photoURL || mockGoogleUserPhotoURL;
+        updatedGoogleUser.password = updatedGoogleUser.password || "mockpassword";
+        updateUserInStorage(updatedGoogleUser.id, updatedGoogleUser);
+        googleUserRaw = updatedGoogleUser;
     }
-    await login(googleUser.email, googleUser.password!); // Use the (potentially newly set) password
+    await login(googleUserRaw.email, googleUserRaw.password!); 
     toast({ title: "Signed in with Google (Simulated)" });
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
-    if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
-        // This block is for when a live API is configured, indicating we should not use localStorage directly
-        console.warn("getAllUsersForLeaderboard called while API_BASE_URL is configured. Leaderboard should fetch from API.");
-        return []; // Or throw an error, or return some default if API isn't ready
-    }
-    // Fallback to localStorage if API_BASE_URL is the placeholder
+    // This function returns all users from localStorage, used by LeaderboardTable
     const users = getAllUsers();
-    return users.map(u => initializeUserFields(u));
+    // Initialize fields and remove password for leaderboard display
+    return users.map(u => {
+      const initializedUser = initializeUserFields(u);
+      const { password, ...userForDisplay } = initializedUser;
+      return userForDisplay;
+    });
   };
 
   const recordAdWatchAndCheckIn = async (): Promise<boolean> => {
@@ -516,10 +520,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
     }
 
-    let mutableUser = { ...currentUserData };
+    let mutableUser = { ...currentUserData }; // Create a mutable copy
     const today = todayISOString();
     const yesterday = yesterdayISOString();
 
+    // Reset adsWatchedToday if last ad watch was not today
     if (mutableUser.lastAdWatchDate !== today) {
       mutableUser.adsWatchedToday = 0;
       mutableUser.lastAdWatchDate = today;
@@ -527,6 +532,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (mutableUser.adsWatchedToday >= MAX_ADS_PER_DAY) {
       toast({ title: "Ad Limit Reached", description: "You've watched all available ads for today." });
+      // Update user state to reflect the reset if it happened
       setUser(prev => prev ? {...prev, adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate } : null);
       updateUserInStorage(mutableUser.id, { adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate });
       return false;
@@ -543,25 +549,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try { return isSameDay(parseISO(dateStr), new Date()); } catch { return false; }
     });
 
-
     if (!hasCheckedInToday) {
       if (mutableUser.lastStreakUpdate === yesterday) {
         mutableUser.currentStreak = (Number(mutableUser.currentStreak) || 0) + 1;
-      } else if (mutableUser.lastStreakUpdate !== today) {
+      } else if (mutableUser.lastStreakUpdate !== today) { // If last update wasn't today or yesterday
         mutableUser.currentStreak = 1;
       }
       mutableUser.lastStreakUpdate = today;
 
       let newCheckIns = [today, ...mutableUser.dailyCheckIns.filter(d => d !== today)];
+      // Ensure unique dates, sort, and limit to 7
       newCheckIns = Array.from(new Set(newCheckIns))
-                         .sort((a,b) => b.localeCompare(a))
-                         .slice(0, 7);
+                         .map(dateStr => { try { return parseISO(dateStr); } catch { return null; }})
+                         .filter(date => date !== null && isValid(date))
+                         .sort((a,b) => b!.getTime() - a!.getTime()) // Sort by date descending
+                         .slice(0, 7)
+                         .map(date => format(date!, 'yyyy-MM-dd'));
       mutableUser.dailyCheckIns = newCheckIns;
     }
-
+    
     const { password, ...userForState } = mutableUser;
-    setUser(userForState as User);
-    updateUserInStorage(mutableUser.id, userForState);
+    setUser(userForState);
+    updateUserInStorage(mutableUser.id, userForState); // Save full user data including password if it exists
 
     toast({ title: "Reward Claimed!", description: `You earned ${reward} coins!` });
     return true;
@@ -598,15 +607,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     const { password, ...userForState } = mutableUser;
-    setUser(userForState as User);
+    setUser(userForState);
     updateUserInStorage(mutableUser.id, userForState);
     return true;
-  };
-
-  const getFullUserFromStorage = (userId: string): User | undefined => {
-    const users = getAllUsers();
-    const rawUser = users.find(u => u.id === userId);
-    return rawUser ? initializeUserFields(rawUser) : undefined;
   };
 
 
@@ -630,3 +633,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

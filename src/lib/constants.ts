@@ -18,3 +18,4 @@ export const AD_DURATION_SECONDS = 5; // Simulate 5 second ad duration
 // Special Bonus Ad Watch constants
 export const SPECIAL_BONUS_ADS_REQUIRED = 5;
 export const SPECIAL_BONUS_COIN_REWARD = 50;
+
