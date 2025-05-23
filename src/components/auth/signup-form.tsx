@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { UserPlus, Mail, KeyRound, User as UserIcon, Eye, EyeOff } from 'lucide-react';
@@ -37,6 +38,9 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
+  agreeToTerms: z.boolean().refine(value => value === true, {
+    message: "You must agree to the terms and conditions to sign up."
+  })
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -56,6 +60,7 @@ export function SignupForm() {
       email: '',
       password: '',
       confirmPassword: '',
+      agreeToTerms: false,
     },
   });
 
@@ -176,6 +181,30 @@ export function SignupForm() {
                     </div>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="agreeToTerms"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md py-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm font-normal text-foreground/80">
+                      I agree to the{' '}
+                      <Link href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:text-accent/80 underline">
+                        Terms & Conditions
+                      </Link>
+                      .
+                    </FormLabel>
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />

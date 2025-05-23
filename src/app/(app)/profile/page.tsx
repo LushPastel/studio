@@ -143,7 +143,7 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={HelpCircle} text="Get Help" onClick={handleGetHelp} />
         <Separator />
-        <ProfileListItem icon={FileText} text="Terms and Conditions" onClick={() => toast({ title: "Coming Soon", description: "Terms & Conditions will be available soon."})} />
+        <ProfileListItem icon={FileText} text="Terms and Conditions" href="/terms-and-conditions" />
         <Separator />
         <ProfileListItem icon={ShieldCheck} text="Privacy Policy" onClick={() => toast({ title: "Coming Soon", description: "Privacy Policy will be available soon."})} />
         <Separator />
