@@ -2,17 +2,14 @@
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { APP_NAME } from '@/lib/constants';
+import { APP_NAME, SUPPORT_EMAIL } from '@/lib/constants';
 
 export default function TermsAndConditionsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <Link href="/signup" className="flex items-center text-sm text-primary hover:underline">
-            <ChevronLeft className="h-5 w-5 mr-1" />
-            Back to Signup
-          </Link>
+          {/* "Back to Signup" link removed */}
         </div>
         <Card className="shadow-lg border-primary/20">
           <CardHeader>
@@ -46,7 +43,7 @@ export default function TermsAndConditionsPage() {
             <p>We reserve the right to modify earning rates and reward logic at any time.</p>
 
             <h2 className="font-semibold text-lg text-foreground">6. Withdrawals</h2>
-            <p>A minimum of 5000 Coins is required to request a payout.</p>
+            <p>A minimum of {MIN_WITHDRAWAL_AMOUNT} Coins is required to request a payout.</p>
             <p>Payout processing may take 3–7 working days.</p>
             <p>{APP_NAME} reserves the right to verify user activity before approving any withdrawal.</p>
 
@@ -81,7 +78,7 @@ export default function TermsAndConditionsPage() {
 
             <h2 className="font-semibold text-lg text-foreground">13. Contact</h2>
             <p>For support or questions:</p>
-            <p>📧 <a href="mailto:cashwhiz.helpdesk@gmail.com" className="text-accent hover:underline">cashwhiz.helpdesk@gmail.com</a></p>
+            <p>📧 <a href={`mailto:${SUPPORT_EMAIL}`} className="text-accent hover:underline">{SUPPORT_EMAIL}</a></p>
           </CardContent>
         </Card>
       </div>
