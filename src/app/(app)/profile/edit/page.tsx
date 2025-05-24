@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -27,8 +26,6 @@ const profileFormSchema = z.object({
   email: z.string().email(),
   gender: z.enum(["Not Specified", "Male", "Female", "Other"]),
   ageRange: z.enum(["Prefer not to say", "18-24", "25-34", "35-44", "45-54", "55+"]),
-  contactMethod: z.enum(["WhatsApp", "Instagram", "Telegram"]),
-  contactDetail: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -78,7 +75,6 @@ export default function EditProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentContactMethod, setCurrentContactMethod] = useState<'WhatsApp' | 'Instagram' | 'Telegram'>('WhatsApp');
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,8 +93,6 @@ export default function EditProfilePage() {
       email: '',
       gender: 'Not Specified',
       ageRange: 'Prefer not to say',
-      contactMethod: 'WhatsApp',
-      contactDetail: '',
     },
   });
 
@@ -113,10 +107,7 @@ export default function EditProfilePage() {
           email: user.email || '',
           gender: user.gender || 'Not Specified',
           ageRange: user.ageRange || 'Prefer not to say',
-          contactMethod: user.contactMethod || 'WhatsApp',
-          contactDetail: user.contactDetail || '',
         });
-        setCurrentContactMethod(user.contactMethod || 'WhatsApp');
         setImagePreview(user.photoURL || null);
       }
     }
@@ -178,13 +169,11 @@ export default function EditProfilePage() {
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
-    const success = updateUser({ // updateUser is synchronous in this context
+    const success = updateUser({ 
       name: data.name,
-      photoURL: data.photoURL, // This is now the Data URI
+      photoURL: data.photoURL, 
       gender: data.gender,
       ageRange: data.ageRange,
-      contactMethod: currentContactMethod, // This is already correct from state
-      contactDetail: data.contactDetail,
     });
 
     if (success) {
@@ -203,15 +192,6 @@ export default function EditProfilePage() {
       </div>
     );
   }
-
-  const getContactPlaceholder = () => {
-    switch (currentContactMethod) {
-      case 'WhatsApp': return 'WhatsApp Number (e.g., +1234567890)';
-      case 'Instagram': return 'Instagram Username (e.g., @username)';
-      case 'Telegram': return 'Telegram Username (e.g., @username)';
-      default: return 'Contact Detail';
-    }
-  };
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -315,47 +295,6 @@ export default function EditProfilePage() {
               </div>
             </div>
 
-            <div>
-              <Label className="text-foreground/80 mb-1 block">Contact Details</Label>
-              <Tabs
-                value={currentContactMethod}
-                onValueChange={(value) => {
-                  setCurrentContactMethod(value as 'WhatsApp' | 'Instagram' | 'Telegram');
-                  form.setValue('contactMethod', value as 'WhatsApp' | 'Instagram' | 'Telegram');
-                }}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-3 bg-muted/50">
-                  <TabsTrigger value="WhatsApp" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">WhatsApp</TabsTrigger>
-                  <TabsTrigger value="Instagram" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Instagram</TabsTrigger>
-                  <TabsTrigger value="Telegram" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Telegram</TabsTrigger>
-                </TabsList>
-                <TabsContent value="WhatsApp">
-                   <Input
-                    {...form.register("contactDetail")}
-                    placeholder={getContactPlaceholder()}
-                    className="mt-2 border-input focus:border-primary focus:ring-primary"
-                  />
-                </TabsContent>
-                <TabsContent value="Instagram">
-                  <Input
-                    {...form.register("contactDetail")}
-                    placeholder={getContactPlaceholder()}
-                    className="mt-2 border-input focus:border-primary focus:ring-primary"
-                  />
-                </TabsContent>
-                <TabsContent value="Telegram">
-                  <Input
-                    {...form.register("contactDetail")}
-                    placeholder={getContactPlaceholder()}
-                    className="mt-2 border-input focus:border-primary focus:ring-primary"
-                  />
-                </TabsContent>
-              </Tabs>
-              {form.formState.errors.contactDetail && <p className="text-sm text-destructive mt-1">{form.formState.errors.contactDetail.message}</p>}
-            </div>
-
-
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
@@ -424,3 +363,5 @@ export default function EditProfilePage() {
     </div>
   );
 }
+
+    
