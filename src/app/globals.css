@@ -17,7 +17,7 @@ body {
     --popover: 210 40% 10%;
     --popover-foreground: 210 40% 95%;
 
-    --primary: 184 100% 50%; /* Neon Cyan #00f0ff */
+    --primary: 330 100% 50%; /* Neon Wine */
     --primary-foreground: 210 40% 7%; /* Dark for text on primary */
 
     --secondary: 210 40% 15%;
@@ -26,7 +26,7 @@ body {
     --muted: 210 40% 15%;
     --muted-foreground: 210 40% 60%;
 
-    --accent: 183 100% 74%; /* Electric Blue #7DF9FF */
+    --accent: 183 100% 74%; /* Electric Blue #7DF9FF - Kept as is, may need future adjustment for harmony */
     --accent-foreground: 210 40% 7%; /* Dark for text on accent */
 
     --destructive: 0 80% 55%; /* Neon-ish Red */
@@ -34,9 +34,9 @@ body {
 
     --border: 210 40% 20%;
     --input: 210 40% 12%;
-    --ring: 184 100% 50%; /* Neon Cyan for focus rings */
+    --ring: 330 100% 50%; /* Neon Wine for focus rings */
     
-    --chart-1: 184 100% 50%;
+    --chart-1: 330 100% 50%; /* Neon Wine for charts */
     --chart-2: 183 100% 74%;
     --chart-3: 210 40% 60%;
     --chart-4: 0 80% 55%;
@@ -46,12 +46,12 @@ body {
 
     --sidebar-background: 210 30% 5%; /* Darker for sidebar */
     --sidebar-foreground: 183 90% 70%; /* Lighter Electric blue for text */
-    --sidebar-primary: 184 100% 50%; /* Neon Cyan for active items */
+    --sidebar-primary: 330 100% 50%; /* Neon Wine for active items in sidebar */
     --sidebar-primary-foreground: 210 40% 7%;
     --sidebar-accent: 210 30% 12%; /* Hover/accent within sidebar */
-    --sidebar-accent-foreground: 184 100% 60%;
+    --sidebar-accent-foreground: 330 100% 60%;
     --sidebar-border: 210 30% 15%;
-    --sidebar-ring: 184 100% 50%;
+    --sidebar-ring: 330 100% 50%;
   }
 
   .dark {
@@ -64,7 +64,7 @@ body {
     --popover: 210 40% 10%;
     --popover-foreground: 210 40% 95%;
 
-    --primary: 184 100% 50%;
+    --primary: 330 100% 50%; /* Neon Wine */
     --primary-foreground: 210 40% 7%;
 
     --secondary: 210 40% 15%;
@@ -81,9 +81,9 @@ body {
 
     --border: 210 40% 20%;
     --input: 210 40% 12%;
-    --ring: 184 100% 50%;
+    --ring: 330 100% 50%;
 
-    --chart-1: 184 100% 50%;
+    --chart-1: 330 100% 50%;
     --chart-2: 183 100% 74%;
     --chart-3: 210 40% 60%;
     --chart-4: 0 80% 55%;
@@ -91,12 +91,12 @@ body {
     
     --sidebar-background: 210 30% 5%;
     --sidebar-foreground: 183 90% 70%;
-    --sidebar-primary: 184 100% 50%;
+    --sidebar-primary: 330 100% 50%;
     --sidebar-primary-foreground: 210 40% 7%;
     --sidebar-accent: 210 30% 12%;
-    --sidebar-accent-foreground: 184 100% 60%;
+    --sidebar-accent-foreground: 330 100% 60%;
     --sidebar-border: 210 30% 15%;
-    --sidebar-ring: 184 100% 50%;
+    --sidebar-ring: 330 100% 50%;
   }
 }
 
