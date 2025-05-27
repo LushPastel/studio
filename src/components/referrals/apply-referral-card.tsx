@@ -17,15 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/context/auth-context';
 import { CheckCircle, UserPlus } from "lucide-react";
-import { useState } from 'react'; 
+import { useState } from 'react';
 
 const formSchema = z.object({
   referralCode: z.string().min(6, { message: 'Referral code must be at least 6 characters.' }),
 });
 
 export function ApplyReferralCard() {
-  const { applyReferral, user } = useAuth(); // Get user to check hasAppliedReferral
-  // Determine if the user has already applied a referral from their user data
+  const { applyReferral, user } = useAuth();
   const hasAlreadyAppliedReferral = user?.hasAppliedReferral;
   const [appliedThisSession, setAppliedThisSession] = useState(false);
 
@@ -38,14 +37,12 @@ export function ApplyReferralCard() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (hasAlreadyAppliedReferral) {
-      // This case should ideally be prevented by disabling the form or showing a message
-      // if hasAlreadyAppliedReferral is true, but this is an extra check.
       return;
     }
     const success = applyReferral(values.referralCode);
     if (success) {
       form.reset();
-      setAppliedThisSession(true); 
+      setAppliedThisSession(true);
     }
   }
 
@@ -67,11 +64,10 @@ export function ApplyReferralCard() {
     );
   }
 
-
   return (
-    <Card className="shadow-lg border-accent/30">
+    <Card className="shadow-lg border-primary/30"> {/* Changed border to primary for consistency */}
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-accent flex items-center">
+        <CardTitle className="text-2xl font-semibold text-primary flex items-center"> {/* Changed text to primary */}
           <UserPlus className="mr-2 h-6 w-6" /> Got a Referral Code?
         </CardTitle>
         <CardDescription>
@@ -88,15 +84,15 @@ export function ApplyReferralCard() {
                 <FormItem>
                   <FormLabel className="text-foreground/80">Enter Code</FormLabel>
                   <FormControl>
-                    <Input placeholder="Referral Code" {...field} className="border-accent/50" />
+                    <Input placeholder="Referral Code" {...field} className="border-input focus:border-primary focus:ring-primary" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button 
-              type="submit" 
-              className="w-full bg-accent text-accent-foreground hover:bg-accent/90 hover:shadow-[0_0_15px_2px_hsl(var(--accent))] transition-shadow duration-300"
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_2px_hsl(var(--primary))] transition-shadow duration-300"
             >
               Apply Code
             </Button>
