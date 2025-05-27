@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react'; // Ensure React is imported
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { Hourglass, Gamepad2, TrendingUp, Gift, Star } from 'lucide-react';
+import { Hourglass, Gamepad2, TrendingUp, Star, Gift } from 'lucide-react'; // Added Gift
 import { Separator } from '@/components/ui/separator';
 import { OfferCard } from '@/components/home/OfferCard';
 import { ShopPromoCard } from '@/components/dashboard/ShopPromoCard';
@@ -30,7 +30,7 @@ const FiveStars = () => (
 );
 
 export default function HomePage() {
-  const { user, isAuthenticated, isLoadingAuth, addCoins, updateUser } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth, updateUser } = useAuth(); // Removed addCoins
   const router = useRouter();
   const { toast } = useToast();
 
@@ -51,13 +51,10 @@ export default function HomePage() {
 
   const handleRateUs = async () => {
     if (user && !user.hasRatedApp) {
-      const success = await addCoins(20); 
-      if (success) {
-        updateUser({ hasRatedApp: true });
-        toast({ title: "Thanks for rating!", description: "20 coins have been added to your balance." });
-      }
+      updateUser({ hasRatedApp: true });
+      toast({ title: "Thanks for rating!", description: `We appreciate your feedback on ${APP_NAME}.` }); // Updated toast
     } else if (user && user.hasRatedApp) {
-      toast({ title: "Already Rated", description: "You've already claimed this bonus!" });
+      toast({ title: "Already Rated", description: "You've already shared your feedback!" });
     }
   };
 
@@ -191,7 +188,7 @@ export default function HomePage() {
            <SpecialBonusAdCard />
            <OfferCard
             title="Rate Us"
-            subtitle={user?.hasRatedApp ? "Bonus Claimed! Thanks for your support." : `Enjoying ${APP_NAME}? Rate us 5 Stars & get 20 coins!`}
+            subtitle={user?.hasRatedApp ? "Thanks for your feedback!" : `Enjoying ${APP_NAME}? Share your thoughts!`}
             customIconElement={<FiveStars />}
             className="bg-yellow-500 text-white"
             onClickAction={handleRateUs}
