@@ -11,7 +11,10 @@ import {
   APP_NAME,
   MAX_ADS_PER_DAY,
   AD_REWARDS_TIERED,
-  SPECIAL_OFFERS_CONFIG // Import for default values if needed, or just for type
+  SPECIAL_OFFERS_CONFIG,
+  AD_DURATION_SECONDS, // Used by SpecialBonusAdCard, ensure it's available
+  SPECIAL_BONUS_ADS_REQUIRED,
+  SPECIAL_BONUS_COIN_REWARD,
 } from '@/lib/constants';
 import { format, subDays, parseISO, isValid, isSameDay } from 'date-fns';
 
@@ -30,6 +33,14 @@ interface NotificationPreferences {
 interface SpecialOfferProgress {
   currentOfferIndex: number;
   completedOfferIds: string[];
+}
+
+export interface CoinTransaction {
+  id: string;
+  amount: number;
+  type: 'Daily Ad' | 'Referral Bonus' | 'Special Offer' | 'Special Bonus' | 'Rating Bonus' | 'Manual Adjustment';
+  description: string;
+  date: string; // ISO string
 }
 
 interface User {
@@ -53,7 +64,14 @@ interface User {
   adsWatchedToday: number;
   lastAdWatchDate: string;
   dailyCheckIns: string[];
-  specialOfferProgress: SpecialOfferProgress;
+  // For daily refreshing special offers
+  dailySpecialOffersCompletedIds: string[];
+  lastSpecialOfferResetDate: string;
+  historicalSpecialOffers: Array<{ id: string; dateCompleted: string; coinsEarned: number }>;
+  // For one-time special ad bonus
+  specialBonusAdsWatched: number;
+  specialBonusCompleted: boolean;
+  coinTransactionHistory: CoinTransaction[];
 }
 
 export interface WithdrawalRequest {
@@ -72,7 +90,7 @@ interface AuthContextType {
   login: (email: string, passwordInput: string) => Promise<boolean>;
   logout: () => void;
   addBalance: (amount: number) => void;
-  addCoins: (amount: number) => boolean;
+  addCoins: (amount: number, type: CoinTransaction['type'], description: string) => boolean;
   spendCoins: (amount: number) => boolean;
   requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
@@ -82,6 +100,7 @@ interface AuthContextType {
   getAllUsersForLeaderboard: () => User[];
   recordAdWatchAndCheckIn: () => Promise<boolean>;
   completeSpecialOffer: (offerId: string, coinReward: number) => Promise<boolean>;
+  recordSpecialBonusAdWatch: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,7 +109,6 @@ const generateReferralCode = () => `${APP_NAME.toUpperCase().substring(0,8).repl
 const todayISOString = () => format(new Date(), 'yyyy-MM-dd');
 const yesterdayISOString = () => format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
-// Helper to get all users from localStorage
 const getAllUsers = (): User[] => {
   if (typeof window === 'undefined') return [];
   try {
@@ -102,7 +120,6 @@ const getAllUsers = (): User[] => {
   }
 };
 
-// Helper to save all users to localStorage
 const saveAllUsers = (users: User[]) => {
   if (typeof window === 'undefined') return;
   try {
@@ -112,12 +129,10 @@ const saveAllUsers = (users: User[]) => {
   }
 };
 
-// Helper to get a specific user (including password) from localStorage
 const getFullUserFromStorage = (userId: string): User | undefined => {
   const users = getAllUsers();
   return users.find(u => u.id === userId);
 };
-
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -127,7 +142,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   const initializeUserFields = (userData: any): User => {
-    return {
+    const today = todayISOString();
+    const yesterday = yesterdayISOString();
+
+    let initializedData = {
       ...userData,
       balance: Number(userData.balance) || 0,
       coins: Number(userData.coins) || 0,
@@ -146,8 +164,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: Number(userData.adsWatchedToday) || 0,
       lastAdWatchDate: userData.lastAdWatchDate || "",
       dailyCheckIns: Array.isArray(userData.dailyCheckIns) ? userData.dailyCheckIns.filter((d): d is string => typeof d === 'string' && isValid(parseISO(d))) : [],
-      specialOfferProgress: userData.specialOfferProgress || { currentOfferIndex: 0, completedOfferIds: [] },
+      dailySpecialOffersCompletedIds: Array.isArray(userData.dailySpecialOffersCompletedIds) ? userData.dailySpecialOffersCompletedIds : [],
+      lastSpecialOfferResetDate: userData.lastSpecialOfferResetDate || "",
+      historicalSpecialOffers: Array.isArray(userData.historicalSpecialOffers) ? userData.historicalSpecialOffers : [],
+      specialBonusAdsWatched: Number(userData.specialBonusAdsWatched) || 0,
+      specialBonusCompleted: !!userData.specialBonusCompleted,
+      coinTransactionHistory: Array.isArray(userData.coinTransactionHistory) ? userData.coinTransactionHistory : [],
     };
+
+    // Daily reset logic
+    if (initializedData.lastAdWatchDate !== today) {
+      initializedData.adsWatchedToday = 0;
+    }
+    if (initializedData.lastStreakUpdate !== today && initializedData.lastStreakUpdate !== yesterday) {
+      initializedData.currentStreak = 0;
+    }
+    if (initializedData.lastSpecialOfferResetDate !== today) {
+        initializedData.dailySpecialOffersCompletedIds = [];
+    }
+     initializedData.dailyCheckIns = initializedData.dailyCheckIns
+      .filter(dateStr => { try { return isValid(parseISO(dateStr)); } catch { return false; }})
+      .sort((a,b) => parseISO(b).getTime() - parseISO(a).getTime())
+      .slice(0, 7);
+
+    return initializedData;
   };
 
   useEffect(() => {
@@ -165,19 +205,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (loggedInUserRaw) {
           let userToSet = initializeUserFields(loggedInUserRaw);
 
+          // Ensure daily resets are applied if user data was stale
           const today = todayISOString();
-          const yesterday = yesterdayISOString();
-
           if (userToSet.lastAdWatchDate !== today) {
             userToSet.adsWatchedToday = 0;
+            userToSet.lastAdWatchDate = today; // Important to update this so it doesn't reset again until tomorrow
           }
-          if (userToSet.lastStreakUpdate !== today && userToSet.lastStreakUpdate !== yesterday) {
-            userToSet.currentStreak = 0;
+          if (userToSet.lastSpecialOfferResetDate !== today) {
+            userToSet.dailySpecialOffersCompletedIds = [];
+            userToSet.lastSpecialOfferResetDate = today;
           }
-          userToSet.dailyCheckIns = userToSet.dailyCheckIns
-            .filter(dateStr => { try { return isValid(parseISO(dateStr)); } catch { return false; }})
-            .sort((a,b) => parseISO(b).getTime() - parseISO(a).getTime())
-            .slice(0, 7);
 
           const { password, ...userWithoutPassword } = userToSet;
           setUser(userWithoutPassword);
@@ -186,7 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (storedHistory) {
             setWithdrawalHistory(JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })));
           }
-          updateUserInStorage(userToSet.id, userToSet);
+          updateUserInStorage(userToSet.id, userToSet); // Save potentially reset daily fields
         } else {
           localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
         }
@@ -222,7 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       id: `user-${Date.now()}`,
       email: email.toLowerCase(),
       name,
-      password: passwordInput,
+      password: passwordInput, // Stored in plain text for prototype
       balance: 0,
       coins: 0,
       referralCode: generateReferralCode(),
@@ -239,7 +276,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       adsWatchedToday: 0,
       lastAdWatchDate: "",
       dailyCheckIns: [],
-      specialOfferProgress: { currentOfferIndex: 0, completedOfferIds: [] },
+      dailySpecialOffersCompletedIds: [],
+      lastSpecialOfferResetDate: "",
+      historicalSpecialOffers: [],
+      specialBonusAdsWatched: 0,
+      specialBonusCompleted: false,
+      coinTransactionHistory: [],
     };
 
     allUsers.push(newUser);
@@ -272,27 +314,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     let userToLogin = initializeUserFields(rawFoundUser);
 
+    // Ensure daily resets are applied on login
     const today = todayISOString();
-    const yesterday = yesterdayISOString();
-
+    let fieldsToUpdateOnLogin: Partial<User> = {};
     if (userToLogin.lastAdWatchDate !== today) {
-        userToLogin.adsWatchedToday = 0;
+        fieldsToUpdateOnLogin.adsWatchedToday = 0;
+        fieldsToUpdateOnLogin.lastAdWatchDate = today;
     }
-    if (userToLogin.lastStreakUpdate !== today && userToLogin.lastStreakUpdate !== yesterday) {
-        userToLogin.currentStreak = 0;
+    if (userToLogin.lastSpecialOfferResetDate !== today) {
+        fieldsToUpdateOnLogin.dailySpecialOffersCompletedIds = [];
+        fieldsToUpdateOnLogin.lastSpecialOfferResetDate = today;
     }
-    userToLogin.dailyCheckIns = userToLogin.dailyCheckIns
-        .filter(dateStr => { try { return isValid(parseISO(dateStr)); } catch { return false; }})
-        .sort((a,b) => parseISO(b).getTime() - parseISO(a).getTime())
-        .slice(0, 7);
+    userToLogin = { ...userToLogin, ...fieldsToUpdateOnLogin };
 
-    updateUserInStorage(userToLogin.id, {
-        adsWatchedToday: userToLogin.adsWatchedToday,
-        currentStreak: userToLogin.currentStreak,
-        dailyCheckIns: userToLogin.dailyCheckIns,
-        lastAdWatchDate: userToLogin.lastAdWatchDate === today ? today : userToLogin.lastAdWatchDate,
-        lastStreakUpdate: userToLogin.lastStreakUpdate,
-    });
 
     const { password, ...userForState } = userToLogin;
     setUser(userForState);
@@ -302,6 +336,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const storedHistory = localStorage.getItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${userToLogin.id}`);
         setWithdrawalHistory(storedHistory ? JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })) : []);
     }
+    updateUserInStorage(userToLogin.id, userToLogin); // Save updated daily fields
 
     toast({ title: "Login Successful", description: `Welcome back, ${userToLogin.name}!` });
     return true;
@@ -322,23 +357,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!currentUserData) return;
 
     const newBalance = parseFloat((currentUserData.balance + amount).toFixed(2));
-    setUser(prevUser => prevUser ? { ...prevUser, balance: newBalance } : null);
-    updateUserInStorage(user.id, { balance: newBalance });
+    const updatedFields = { balance: newBalance };
+    setUser(prevUser => prevUser ? { ...prevUser, ...updatedFields } : null);
+    updateUserInStorage(user.id, updatedFields);
   };
 
-  const addCoins = (amount: number): boolean => {
+  const addCoins = (amount: number, type: CoinTransaction['type'], description: string): boolean => {
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "User not logged in." });
       return false;
     }
     const currentUserData = getFullUserFromStorage(user.id);
-    if (!currentUserData) return false;
+    if (!currentUserData) {
+        toast({ variant: "destructive", title: "Error", description: "User data not found." });
+        return false;
+    }
 
     const currentCoins = Number(currentUserData.coins) || 0;
     const newCoins = currentCoins + Number(amount);
 
-    setUser(prevUser => prevUser ? { ...prevUser, coins: newCoins } : null);
-    updateUserInStorage(user.id, { coins: newCoins });
+    const newTransaction: CoinTransaction = {
+      id: `txn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      amount: Number(amount),
+      type,
+      description,
+      date: new Date().toISOString(),
+    };
+    const existingHistory = Array.isArray(currentUserData.coinTransactionHistory) ? currentUserData.coinTransactionHistory : [];
+    const updatedHistory = [newTransaction, ...existingHistory].slice(0, 50);
+
+    const updatedFields = { coins: newCoins, coinTransactionHistory: updatedHistory };
+
+    setUser(prevUser => prevUser ? { ...prevUser, ...updatedFields } : null);
+    updateUserInStorage(user.id, updatedFields);
     return true;
   };
 
@@ -356,8 +407,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
     const newCoins = currentCoins - Number(amount);
-    setUser(prevUser => prevUser ? { ...prevUser, coins: newCoins } : null);
-    updateUserInStorage(user.id, { coins: newCoins });
+    // Log spending transaction if needed (not implemented here for brevity)
+    const updatedFields = { coins: newCoins };
+    setUser(prevUser => prevUser ? { ...prevUser, ...updatedFields } : null);
+    updateUserInStorage(user.id, updatedFields);
     return true;
   };
 
@@ -378,16 +431,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
     const newBalance = parseFloat((currentUserData.balance - amount).toFixed(2));
-    setUser(prevUser => prevUser ? { ...prevUser, balance: newBalance } : null);
-    updateUserInStorage(user.id, { balance: newBalance });
+    updateUser( { balance: newBalance } ); // Use updateUser to also update state
 
     const newRequest: WithdrawalRequest = {
       id: `wd-${Date.now()}`, amount, status: 'pending', requestedAt: new Date(),
     };
-    const updatedHistory = [newRequest, ...withdrawalHistory];
-    setWithdrawalHistory(updatedHistory);
+    const updatedWithdrawalHist = [newRequest, ...withdrawalHistory];
+    setWithdrawalHistory(updatedWithdrawalHist);
     if (typeof window !== 'undefined') {
-        localStorage.setItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${user.id}`, JSON.stringify(updatedHistory));
+        localStorage.setItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${user.id}`, JSON.stringify(updatedWithdrawalHist));
     }
     toast({ title: "Withdrawal Requested", description: `₹${amount.toFixed(2)} withdrawal request submitted.` });
     return true;
@@ -398,43 +450,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to apply a referral code." });
       return false;
     }
-    const currentUserData = getFullUserFromStorage(user.id);
-    if (!currentUserData || currentUserData.hasAppliedReferral) {
+    const applicantFullData = getFullUserFromStorage(user.id);
+    if (!applicantFullData || applicantFullData.hasAppliedReferral) {
       toast({ variant: "destructive", title: "Referral Failed", description: "You have already applied a referral bonus or user data is missing." });
       return false;
     }
 
     let allUsers = getAllUsers();
     const codeToCompare = code.trim().toUpperCase();
-    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === codeToCompare && u.id !== currentUserData.id);
+    const referrerIndex = allUsers.findIndex(u => u.referralCode.toUpperCase() === codeToCompare && u.id !== applicantFullData.id);
 
     if (referrerIndex === -1) {
       toast({ variant: "destructive", title: "Invalid Referral Code", description: "The referral code is invalid or does not exist." });
       return false;
     }
 
-    // Update applicant (current user)
-    const applicantNewBalance = parseFloat(((currentUserData.balance || 0) + REFERRAL_BONUS).toFixed(2));
-    const applicantNewCoins = (currentUserData.coins || 0) + REFERRAL_BONUS;
-    const applicantUpdatedFields: Partial<User> = {
-      balance: applicantNewBalance,
-      coins: applicantNewCoins,
-      hasAppliedReferral: true
-    };
-
-    setUser(prevUser => prevUser ? { ...prevUser, ...applicantUpdatedFields } : null);
-    updateUserInStorage(currentUserData.id, applicantUpdatedFields);
-
-    allUsers = getAllUsers();
-
-    // Update referrer
     let referrer = allUsers[referrerIndex];
-    referrer.balance = parseFloat(((referrer.balance || 0) + REFERRAL_BONUS).toFixed(2));
-    referrer.coins = (referrer.coins || 0) + REFERRAL_BONUS;
-    referrer.referralsMade = (referrer.referralsMade || 0) + 1;
-    updateUserInStorage(referrer.id, { balance: referrer.balance, coins: referrer.coins, referralsMade: referrer.referralsMade });
 
-    toast({ title: "Referral Applied!", description: `You've received a ₹${REFERRAL_BONUS.toFixed(2)} balance bonus and ${REFERRAL_BONUS} coins!` });
+    // Apply to applicant
+    addCoins(REFERRAL_BONUS, 'Referral Bonus', `Applied referral code ${referrer.referralCode}`);
+    updateUser({ hasAppliedReferral: true }); // This saves applicant's specific field
+
+    // Apply to referrer
+    const referrerCurrentCoins = Number(referrer.coins) || 0;
+    const referrerNewCoins = referrerCurrentCoins + REFERRAL_BONUS;
+    const referrerTransaction: CoinTransaction = {
+      id: `txn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      amount: REFERRAL_BONUS,
+      type: 'Referral Bonus',
+      description: `Friend ${applicantFullData.name} used your code`,
+      date: new Date().toISOString(),
+    };
+    const referrerHistory = Array.isArray(referrer.coinTransactionHistory) ? referrer.coinTransactionHistory : [];
+    const referrerUpdatedHistory = [referrerTransaction, ...referrerHistory].slice(0, 50);
+
+    updateUserInStorage(referrer.id, {
+      coins: referrerNewCoins,
+      coinTransactionHistory: referrerUpdatedHistory,
+      referralsMade: (referrer.referralsMade || 0) + 1,
+    });
+
+    toast({ title: "Referral Applied!", description: `You and your friend earned ${REFERRAL_BONUS} coins!` });
     return true;
   };
 
@@ -443,20 +499,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
       return false;
     }
-    const currentUserData = getFullUserFromStorage(user.id);
-    if (!currentUserData) return false;
+    const currentUserData = getFullUserFromStorage(user.id); // Get latest from storage
+    if (!currentUserData) {
+        toast({ variant: "destructive", title: "Error", description: "User data not found for update." });
+        return false;
+    }
 
     const updatedUser = { ...currentUserData, ...updatedDetails };
-    const { password, ...userForState } = updatedUser;
-    setUser(userForState);
-    updateUserInStorage(user.id, updatedUser);
+    const { password, ...userForState } = updatedUser; // Ensure password is not in state
+
+    setUser(userForState); // Update local React state
+    updateUserInStorage(user.id, updatedUser); // Update localStorage
     return true;
   };
+
 
   const googleSignIn = async (): Promise<void> => {
     const mockGoogleUserEmail = "google.user@example.com";
     const mockGoogleUserName = "Google User";
-    const mockGoogleUserPhotoURL = "https://placehold.co/100x100/E0E0E0/333333?text=G";
+    const mockGoogleUserPhotoURL = "https://placehold.co/100x100.png?text=G";
 
     let allUsers = getAllUsers();
     let googleUserRaw = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
@@ -466,7 +527,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword",
+        password: "mockpassword", // Placeholder for prototype
         photoURL: mockGoogleUserPhotoURL,
         balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0,
         hasAppliedReferral: false, hasRatedApp: false, gender: 'Not Specified',
@@ -474,7 +535,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
         claimedReferralTiers: [], currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0,
         lastAdWatchDate: "", dailyCheckIns: [],
-        specialOfferProgress: { currentOfferIndex: 0, completedOfferIds: [] },
+        dailySpecialOffersCompletedIds: [], lastSpecialOfferResetDate: "", historicalSpecialOffers: [],
+        specialBonusAdsWatched: 0, specialBonusCompleted: false, coinTransactionHistory: [],
       };
       allUsers.push(newGoogleUser);
       saveAllUsers(allUsers);
@@ -486,20 +548,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateUserInStorage(updatedGoogleUser.id, updatedGoogleUser);
         googleUserRaw = updatedGoogleUser;
     }
+    // Simulate login which handles daily resets and state updates
     await login(googleUserRaw.email, googleUserRaw.password!);
-    toast({ title: "Signed in with Google (Simulated)" });
+    // Toast for Google sign-in is handled by login if successful
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
+    if (API_BASE_URL !== "REPLACE_WITH_YOUR_LIVE_API_BASE_URL") {
+        // This indicates we are in a mode where we might use a live API
+        // For now, as per user request, we'll always use local storage
+    }
     const users = getAllUsers();
     return users.map(u => {
       const initializedUser = initializeUserFields(u);
       const { password, ...userForDisplay } = initializedUser;
       return userForDisplay;
-    }).sort((a, b) => (b.coins || 0) - (a.coins || 0)); // Sort by coins descending
+    }).sort((a, b) => (b.coins || 0) - (a.coins || 0));
   };
 
-  const recordAdWatchAndCheckIn = async (): Promise<boolean> => {
+ const recordAdWatchAndCheckIn = async (): Promise<boolean> => {
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
       return false;
@@ -507,14 +574,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const currentUserData = getFullUserFromStorage(user.id);
     if (!currentUserData) {
-         toast({ variant: "destructive", title: "Error", description: "User data not found." });
+        toast({ variant: "destructive", title: "Error", description: "User data not found." });
         return false;
     }
 
-    let mutableUser = { ...currentUserData };
+    let mutableUser = { ...currentUserData }; // Work with a mutable copy
     const today = todayISOString();
     const yesterday = yesterdayISOString();
 
+    // Reset adsWatchedToday if it's a new day
     if (mutableUser.lastAdWatchDate !== today) {
       mutableUser.adsWatchedToday = 0;
       mutableUser.lastAdWatchDate = today;
@@ -522,17 +590,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (mutableUser.adsWatchedToday >= MAX_ADS_PER_DAY) {
       toast({ title: "Ad Limit Reached", description: "You've watched all available ads for today." });
-      setUser(prev => prev ? {...prev, adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate } : null);
-      updateUserInStorage(mutableUser.id, { adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate });
+      updateUser({ adsWatchedToday: mutableUser.adsWatchedToday, lastAdWatchDate: mutableUser.lastAdWatchDate }); // Ensure date is saved
       return false;
     }
 
     const rewardIndex = mutableUser.adsWatchedToday;
-    const reward = AD_REWARDS_TIERED[rewardIndex < AD_REWARDS_TIERED.length ? rewardIndex : AD_REWARDS_TIERED.length -1];
+    const reward = AD_REWARDS_TIERED[rewardIndex < AD_REWARDS_TIERED.length ? rewardIndex : AD_REWARDS_TIERED.length - 1];
 
-    const currentCoins = Number(mutableUser.coins) || 0;
-    mutableUser.coins = currentCoins + Number(reward);
-    mutableUser.adsWatchedToday += 1;
+    // Call addCoins to handle coin update and transaction logging
+    addCoins(reward, 'Daily Ad', `Watched Ad #${mutableUser.adsWatchedToday + 1}`);
+
+    // Now prepare other user field updates
+    let updatedFieldsForUser: Partial<User> = {
+        adsWatchedToday: mutableUser.adsWatchedToday + 1,
+        lastAdWatchDate: today, // Ensure lastAdWatchDate is updated
+    };
 
     let hasCheckedInToday = mutableUser.dailyCheckIns.some(dateStr => {
         try { return isSameDay(parseISO(dateStr), new Date()); } catch { return false; }
@@ -540,11 +612,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!hasCheckedInToday) {
       if (mutableUser.lastStreakUpdate === yesterday) {
-        mutableUser.currentStreak = (Number(mutableUser.currentStreak) || 0) + 1;
+        updatedFieldsForUser.currentStreak = (Number(mutableUser.currentStreak) || 0) + 1;
       } else if (mutableUser.lastStreakUpdate !== today) {
-        mutableUser.currentStreak = 1;
+        updatedFieldsForUser.currentStreak = 1;
+      } else { // Already checked in today but somehow this logic is hit - keep current streak
+        updatedFieldsForUser.currentStreak = Number(mutableUser.currentStreak) || 0;
       }
-      mutableUser.lastStreakUpdate = today;
+      updatedFieldsForUser.lastStreakUpdate = today;
 
       let newCheckIns = [today, ...mutableUser.dailyCheckIns.filter(d => d !== today)];
       newCheckIns = Array.from(new Set(newCheckIns))
@@ -553,12 +627,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                          .sort((a,b) => b!.getTime() - a!.getTime())
                          .slice(0, 7)
                          .map(date => format(date!, 'yyyy-MM-dd'));
-      mutableUser.dailyCheckIns = newCheckIns;
+      updatedFieldsForUser.dailyCheckIns = newCheckIns;
     }
 
-    const { password, ...userForState } = mutableUser;
-    setUser(userForState);
-    updateUserInStorage(mutableUser.id, userForState);
+    // Use the main updateUser function to save these specific changes
+    updateUser(updatedFieldsForUser);
 
     toast({ title: "Reward Claimed!", description: `You earned ${reward} coins!` });
     return true;
@@ -576,28 +649,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     let mutableUser = { ...currentUserData };
-    let progress = mutableUser.specialOfferProgress || { currentOfferIndex: 0, completedOfferIds: [] };
+    let progress = { // Ensure progress object is well-defined
+        dailySpecialOffersCompletedIds: Array.isArray(mutableUser.dailySpecialOffersCompletedIds) ? mutableUser.dailySpecialOffersCompletedIds : [],
+        lastSpecialOfferResetDate: mutableUser.lastSpecialOfferResetDate || "",
+        historicalSpecialOffers: Array.isArray(mutableUser.historicalSpecialOffers) ? mutableUser.historicalSpecialOffers : [],
+    };
 
-    if (progress.completedOfferIds.includes(offerId)) {
-      toast({ title: "Already Completed", description: "You have already completed this offer." });
-      return false; // Or true if "already completed" is a success from UI perspective
+    const today = todayISOString();
+    // Reset daily progress if it's a new day
+    if (progress.lastSpecialOfferResetDate !== today) {
+        progress.dailySpecialOffersCompletedIds = [];
+        progress.lastSpecialOfferResetDate = today;
     }
 
-    progress.completedOfferIds.push(offerId);
-    progress.currentOfferIndex += 1;
-    mutableUser.specialOfferProgress = progress;
+    if (progress.dailySpecialOffersCompletedIds.includes(offerId)) {
+      toast({ title: "Already Completed Today", description: "You have already completed this offer today." });
+      updateUser({ // Save reset date if it changed
+          dailySpecialOffersCompletedIds: progress.dailySpecialOffersCompletedIds,
+          lastSpecialOfferResetDate: progress.lastSpecialOfferResetDate,
+      });
+      return false;
+    }
 
-    const currentCoins = Number(mutableUser.coins) || 0;
-    mutableUser.coins = currentCoins + Number(coinReward);
+    // Log the coin transaction
+    const offerDetails = SPECIAL_OFFERS_CONFIG.find(o => o.id === offerId);
+    addCoins(coinReward, 'Special Offer', `Completed: ${offerDetails?.title || offerId}`);
 
-    const { password, ...userForState } = mutableUser;
-    setUser(userForState);
-    updateUserInStorage(mutableUser.id, userForState);
+    // Update special offer progress fields
+    const newDailyCompletedIds = [...progress.dailySpecialOffersCompletedIds, offerId];
+    const newHistoricalEntry = { id: offerId, dateCompleted: today, coinsEarned: coinReward };
+    const newHistoricalOffers = [newHistoricalEntry, ...progress.historicalSpecialOffers].slice(0, 10);
+
+    updateUser({
+      dailySpecialOffersCompletedIds: newDailyCompletedIds,
+      lastSpecialOfferResetDate: today, // ensure reset date is current
+      historicalSpecialOffers: newHistoricalOffers,
+    });
 
     toast({ title: "Offer Completed!", description: `You earned ${coinReward} coins!` });
     return true;
   };
 
+  const recordSpecialBonusAdWatch = async (): Promise<boolean> => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
+      return false;
+    }
+    const currentUserData = getFullUserFromStorage(user.id);
+    if (!currentUserData) {
+        toast({ variant: "destructive", title: "Error", description: "User data not found." });
+        return false;
+    }
+
+    if (currentUserData.specialBonusCompleted) {
+      toast({ title: "Bonus Already Claimed", description: "You have already claimed this special bonus." });
+      return false;
+    }
+
+    const newAdsWatched = (currentUserData.specialBonusAdsWatched || 0) + 1;
+    let bonusCompletedThisTime = false;
+    let fieldsToUpdate: Partial<User> = { specialBonusAdsWatched: newAdsWatched };
+
+    if (newAdsWatched >= SPECIAL_BONUS_ADS_REQUIRED) {
+      fieldsToUpdate.specialBonusAdsWatched = SPECIAL_BONUS_ADS_REQUIRED; // Cap it
+      fieldsToUpdate.specialBonusCompleted = true;
+      bonusCompletedThisTime = true;
+      addCoins(SPECIAL_BONUS_COIN_REWARD, 'Special Bonus', 'Special Ad Bonus Claimed');
+      toast({ title: "Special Bonus Claimed!", description: `You earned ${SPECIAL_BONUS_COIN_REWARD} coins!` });
+    } else {
+      toast({ title: "Ad Watched!", description: `Progress: ${newAdsWatched}/${SPECIAL_BONUS_ADS_REQUIRED} ads for special bonus.` });
+    }
+    updateUser(fieldsToUpdate);
+    return true;
+  };
 
   return (
     <AuthContext.Provider value={{
@@ -605,7 +729,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signup, login, logout, addBalance, addCoins, spendCoins,
         requestWithdrawal, withdrawalHistory, applyReferral, updateUser,
         googleSignIn, getAllUsersForLeaderboard,
-        recordAdWatchAndCheckIn, completeSpecialOffer
+        recordAdWatchAndCheckIn, completeSpecialOffer, recordSpecialBonusAdWatch
     }}>
       {children}
     </AuthContext.Provider>
@@ -619,3 +743,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

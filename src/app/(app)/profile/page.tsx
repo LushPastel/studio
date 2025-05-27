@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { Hourglass, UserCog, BellRing, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy } from 'lucide-react';
+import { Hourglass, UserCog, BellRing, History, HelpCircle, FileText, ShieldCheck, LogOut, ChevronRight, Copy, Languages } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -64,7 +64,7 @@ export default function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (isLoggingOut) return; 
+    if (isLoggingOut) return;
     if (!isLoadingAuth && !isAuthenticated) {
       router.push('/login');
     }
@@ -73,7 +73,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     setIsLoggingOut(true);
     logout();
-    router.push('/login'); 
+    router.push('/login');
   };
 
   const handleGetHelp = () => {
@@ -139,7 +139,7 @@ export default function ProfilePage() {
         <Separator />
         <ProfileListItem icon={BellRing} text="Notification Settings" href="/profile/notification-settings" />
         <Separator />
-        <ProfileListItem icon={History} text="Reward History" href="/wallet" />
+        <ProfileListItem icon={History} text="Reward History" href="/reward-history" />
         <Separator />
         <ProfileListItem icon={HelpCircle} text="Get Help" onClick={handleGetHelp} />
         <Separator />
