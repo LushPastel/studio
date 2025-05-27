@@ -5,7 +5,8 @@ import React, { useEffect } from 'react';
 import { useAuth, type CoinTransaction } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Hourglass, Coins, CalendarDays, Info } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronLeft, Hourglass, Coins, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO } from 'date-fns';
@@ -61,15 +62,22 @@ export default function RewardHistoryPage() {
 
       <Card className="border-primary/20 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl">Your Coin Transactions</CardTitle>
-          <CardDescription>Showing the last {coinTransactionHistory.length > 0 ? Math.min(coinTransactionHistory.length, 50) : 0} transactions.</CardDescription>
+          <CardTitle className="text-xl">Your Coin Earnings</CardTitle>
+          <CardDescription>A log of all coins you have earned. Showing the last {coinTransactionHistory.length > 0 ? Math.min(coinTransactionHistory.length, 50) : 0} entries.</CardDescription>
         </CardHeader>
         <CardContent>
           {coinTransactionHistory.length === 0 ? (
-            <div className="text-center py-10">
-              <Info className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">No coin transactions recorded yet.</p>
-              <p className="text-sm text-muted-foreground">Start completing tasks to earn coins!</p>
+            <div className="text-center py-10 flex flex-col items-center justify-center">
+              <Image 
+                src="https://placehold.co/300x200.png" 
+                alt="No data found" 
+                width={200} 
+                height={150}
+                className="mb-4 opacity-70"
+                data-ai-hint="empty box illustration"
+              />
+              <p className="text-muted-foreground text-lg">No data found</p>
+              <p className="text-sm text-muted-foreground mt-1">Start completing tasks to earn coins!</p>
             </div>
           ) : (
             <ScrollArea className="h-[500px] rounded-md border border-border">
@@ -103,4 +111,3 @@ export default function RewardHistoryPage() {
     </div>
   );
 }
-
