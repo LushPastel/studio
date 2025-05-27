@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 import { useAuth, type CoinTransaction } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+// Removed Image import as it's no longer used
 import { ChevronLeft, Hourglass, Coins, CalendarDays, History as HistoryIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -70,15 +70,8 @@ export default function RewardHistoryPage() {
         </CardHeader>
         <CardContent>
           {coinTransactionHistory.length === 0 ? (
-            <div className="text-center py-10 flex flex-col items-center justify-center">
-              <Image 
-                src="https://placehold.co/300x200.png" 
-                alt="No data found" 
-                width={200} 
-                height={150}
-                className="mb-4 opacity-70"
-                data-ai-hint="empty box illustration"
-              />
+            <div className="text-center py-10 flex flex-col items-center justify-center space-y-3">
+              <Hourglass className="h-20 w-20 text-muted-foreground opacity-70" />
               <p className="text-muted-foreground text-lg">No data found</p>
               <p className="text-sm text-muted-foreground mt-1">Start completing tasks to earn coins!</p>
             </div>
