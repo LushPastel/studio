@@ -6,7 +6,7 @@ import { useAuth, type CoinTransaction } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeft, Hourglass, Coins, CalendarDays } from 'lucide-react';
+import { ChevronLeft, Hourglass, Coins, CalendarDays, History as HistoryIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO } from 'date-fns';
@@ -40,7 +40,7 @@ export default function RewardHistoryPage() {
 
   if (isLoadingAuth || !user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Hourglass className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-lg text-foreground">Loading...</p>
       </div>
@@ -62,7 +62,10 @@ export default function RewardHistoryPage() {
 
       <Card className="border-primary/20 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl">Your Coin Earnings</CardTitle>
+          <CardTitle className="text-xl flex items-center">
+            <HistoryIcon className="h-6 w-6 mr-2 text-primary" />
+            Your Coin Earnings
+          </CardTitle>
           <CardDescription>A log of all coins you have earned. Showing the last {coinTransactionHistory.length > 0 ? Math.min(coinTransactionHistory.length, 50) : 0} entries.</CardDescription>
         </CardHeader>
         <CardContent>
