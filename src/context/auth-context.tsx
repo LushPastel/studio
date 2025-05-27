@@ -42,8 +42,8 @@ interface User {
   id: string;
   email: string;
   name: string;
-  password?: string;
-  balance: number; // Not used if only coins exist
+  password?: string; // Stored in localStorage for prototype, NOT for production
+  balance: number; // For monetary balance if different from coins
   coins: number;
   referralCode: string;
   referralsMade: number;
@@ -58,20 +58,24 @@ interface User {
   adsWatchedToday: number;
   lastAdWatchDate: string; // YYYY-MM-DD
   dailyCheckIns: string[]; // Array of YYYY-MM-DD strings
+
   // Special Offer fields (daily refresh)
   dailySpecialOffersCompletedIds: string[];
   lastSpecialOfferResetDate: string; // YYYY-MM-DD
   historicalSpecialOffers: Array<{ id: string; dateCompleted: string; coinsEarned: number }>; // Limited history
+  
   // Special Bonus (one-time multi-ad)
   specialBonusAdsWatched: number;
   specialBonusCompleted: boolean;
+
   coinTransactionHistory: CoinTransaction[];
+
   // Deferred referral bonus fields
   referredBy: string | null;
   isReferralBonusPending: boolean;
   referrerIdForPendingBonus: string | null;
-  hasCompletedFirstOfferwallTask: boolean;
-  hasAppliedReferral: boolean;
+  hasCompletedFirstOfferwallTask: boolean; // True if they completed the task to unlock referral bonus
+  hasAppliedReferral: boolean; // True if they have ever applied ANY referral code
 }
 
 export interface WithdrawalRequest {
@@ -91,12 +95,12 @@ interface AuthContextType {
   logout: () => void;
   addCoins: (amount: number, type: CoinTransaction['type'], description: string) => boolean;
   spendCoins: (amount: number, type: CoinTransaction['type'], description: string) => boolean;
-  requestWithdrawal: (amount: number) => boolean; // Note: Withdrawal is in 'balance', not 'coins'
+  requestWithdrawal: (amount: number) => boolean;
   withdrawalHistory: WithdrawalRequest[];
   applyReferral: (code: string) => boolean;
   updateUser: (updatedDetails: Partial<Omit<User, 'id' | 'email' | 'password'>>) => boolean;
   googleSignIn: () => Promise<void>;
-  getAllUsersForLeaderboard: () => User[]; // For localStorage based leaderboard
+  getAllUsersForLeaderboard: () => User[];
   recordAdWatchAndCheckIn: () => Promise<boolean>;
   completeSpecialOffer: (offerId: string, coinReward: number) => Promise<boolean>;
   recordSpecialBonusAdWatch: () => Promise<boolean>;
@@ -145,10 +149,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const today = todayISOString();
     const yesterday = yesterdayISOString();
 
-    let initializedData = {
-      ...userData,
+    let initializedData: User = {
+      id: userData.id || `user-${Date.now()}`,
+      email: userData.email || '',
+      name: userData.name || 'Unnamed User',
+      password: userData.password, // Keep password if it exists
       balance: Number(userData.balance) || 0,
       coins: Number(userData.coins) || 0,
+      referralCode: userData.referralCode || generateReferralCode(),
       referralsMade: Number(userData.referralsMade) || 0,
       hasRatedApp: !!userData.hasRatedApp,
       gender: userData.gender || 'Not Specified',
@@ -222,18 +230,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const { password, ...userWithoutPassword } = userToSet;
           setUser(userWithoutPassword);
           setIsAuthenticated(true);
-          const storedHistory = localStorage.getItem(\`\${LS_WITHDRAWAL_HISTORY_PREFIX}\${userToSet.id}\`);
+          const storedHistory = localStorage.getItem(LS_WITHDRAWAL_HISTORY_PREFIX + userToSet.id);
           if (storedHistory) {
             setWithdrawalHistory(JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })));
           }
-          updateUserInStorage(userToSet.id, userToSet);
+          updateUserInStorage(userToSet.id, userToSet); // Persist daily resets if any
         } else {
           localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
         }
       }
     } catch (error) {
       console.error("Error during auth initialization from localStorage:", error);
-      localStorage.removeItem(LS_CURRENT_USER_ID_KEY);
+      localStorage.removeItem(LS_CURRENT_USER_ID_KEY); 
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -244,7 +252,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let users = getAllUsers();
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
-      users[userIndex] = { ...users[userIndex], ...updatedDetails };
+      const fullyMergedUser = { ...users[userIndex], ...updatedDetails };
+      users[userIndex] = fullyMergedUser;
       saveAllUsers(users);
       return users[userIndex];
     }
@@ -258,11 +267,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    const today = todayISOString();
     let newUser: User = {
-      id: \`user-\${Date.now()}\`,
+      id: `user-${Date.now()}`,
       email: email.toLowerCase(),
       name,
-      password: passwordInput,
+      password: passwordInput, 
       balance: 0,
       coins: 0,
       referralCode: generateReferralCode(),
@@ -274,12 +284,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       photoURL: undefined,
       claimedReferralTiers: [],
       currentStreak: 0,
-      lastStreakUpdate: "",
+      lastStreakUpdate: "", 
       adsWatchedToday: 0,
-      lastAdWatchDate: "",
+      lastAdWatchDate: today, 
       dailyCheckIns: [],
       dailySpecialOffersCompletedIds: [],
-      lastSpecialOfferResetDate: "",
+      lastSpecialOfferResetDate: today, 
       historicalSpecialOffers: [],
       specialBonusAdsWatched: 0,
       specialBonusCompleted: false,
@@ -300,9 +310,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, newUser.id);
     }
-    setWithdrawalHistory([]);
+    setWithdrawalHistory([]); 
 
-    toast({ title: "Signup Successful", description: \`Welcome, \${name}!\` });
+    toast({ title: "Signup Successful", description: `Welcome, ${name}!` });
     return true;
   };
 
@@ -314,7 +324,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Login Failed", description: "Email not found. Please sign up." });
       return false;
     }
-    if (rawFoundUser.password !== passwordInput) {
+    if (rawFoundUser.password !== passwordInput) { 
       toast({ variant: "destructive", title: "Login Failed", description: "Incorrect password." });
       return false;
     }
@@ -331,6 +341,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         fieldsToUpdateOnLogin.dailySpecialOffersCompletedIds = [];
         fieldsToUpdateOnLogin.lastSpecialOfferResetDate = today;
     }
+    const yesterday = yesterdayISOString();
+    if (userToLogin.lastStreakUpdate !== today && userToLogin.lastStreakUpdate !== yesterday) {
+        fieldsToUpdateOnLogin.currentStreak = 0;
+    }
+
     userToLogin = { ...userToLogin, ...fieldsToUpdateOnLogin };
 
     const { password, ...userForState } = userToLogin;
@@ -338,12 +353,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
         localStorage.setItem(LS_CURRENT_USER_ID_KEY, userToLogin.id);
-        const storedHistory = localStorage.getItem(\`\${LS_WITHDRAWAL_HISTORY_PREFIX}\${userToLogin.id}\`);
+        const storedHistory = localStorage.getItem(LS_WITHDRAWAL_HISTORY_PREFIX + userToLogin.id);
         setWithdrawalHistory(storedHistory ? JSON.parse(storedHistory).map((req: any) => ({...req, requestedAt: new Date(req.requestedAt), processedAt: req.processedAt ? new Date(req.processedAt) : undefined })) : []);
     }
-    updateUserInStorage(userToLogin.id, userToLogin);
+    updateUserInStorage(userToLogin.id, userToLogin); 
 
-    toast({ title: "Login Successful", description: \`Welcome back, \${userToLogin.name}!\` });
+    toast({ title: "Login Successful", description: `Welcome back, ${userToLogin.name}!` });
     return true;
   };
 
@@ -371,7 +386,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newCoins = currentCoins + Number(amount);
 
     const newTransaction: CoinTransaction = {
-      id: \`txn-\${Date.now()}-\${Math.random().toString(36).substring(2, 7)}\`,
+      id: `txn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       amount: Number(amount),
       type,
       description,
@@ -402,7 +417,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const newCoins = currentCoins - Number(amount);
     const newTransaction: CoinTransaction = {
-      id: \`txn-spend-\${Date.now()}-\${Math.random().toString(36).substring(2, 7)}\`,
+      id: `txn-spend-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       amount: -Number(amount),
       type,
       description,
@@ -425,32 +440,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const currentUserData = getFullUserFromStorage(user.id);
     if (!currentUserData) return false;
 
-    if (currentUserData.balance < amount) {
+    if (currentUserData.balance < amount) { 
       toast({ variant: "destructive", title: "Withdrawal Failed", description: "Insufficient balance." });
       return false;
     }
     if (amount < MIN_WITHDRAWAL_AMOUNT) {
-      toast({ variant: "destructive", title: "Withdrawal Failed", description: \`Minimum withdrawal amount is ₹\${MIN_WITHDRAWAL_AMOUNT}.\` });
+      toast({ variant: "destructive", title: "Withdrawal Failed", description: `Minimum withdrawal amount is ₹${MIN_WITHDRAWAL_AMOUNT}.` });
       return false;
     }
     const newBalance = parseFloat((currentUserData.balance - amount).toFixed(2));
     
-    // For consistency, withdrawals could also be logged in coinTransactionHistory if balance and coins are linked
-    // For now, only updating balance and local withdrawal history.
-    // const transactionDescription = \`Withdrawal request: ₹\${amount.toFixed(2)}\`;
-    // addCoins(-amount, 'Withdrawal', transactionDescription); // Example if coins were used for balance
-    
-    updateUser( { balance: newBalance } );
+    updateUser( { balance: newBalance } ); 
 
     const newRequest: WithdrawalRequest = {
-      id: \`wd-\${Date.now()}\`, amount, status: 'pending', requestedAt: new Date(),
+      id: `wd-${Date.now()}`, amount, status: 'pending', requestedAt: new Date(),
     };
     const updatedWithdrawalHist = [newRequest, ...withdrawalHistory];
     setWithdrawalHistory(updatedWithdrawalHist);
     if (typeof window !== 'undefined') {
-        localStorage.setItem(\`\${LS_WITHDRAWAL_HISTORY_PREFIX}\${user.id}\`, JSON.stringify(updatedWithdrawalHist));
+        localStorage.setItem(`${LS_WITHDRAWAL_HISTORY_PREFIX}${user.id}`, JSON.stringify(updatedWithdrawalHist));
     }
-    toast({ title: "Withdrawal Requested", description: \`₹\${amount.toFixed(2)} withdrawal request submitted.\` });
+    toast({ title: "Withdrawal Requested", description: `₹${amount.toFixed(2)} withdrawal request submitted.` });
     return true;
   };
 
@@ -464,9 +474,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Error", description: "Applicant data not found." });
       return false;
     }
-    if (applicantFullData.hasAppliedReferral || applicantFullData.isReferralBonusPending) {
-      toast({ variant: "destructive", title: "Referral Failed", description: "You have already applied for a referral bonus or one is pending." });
+    if (applicantFullData.hasAppliedReferral) { 
+      toast({ variant: "destructive", title: "Referral Failed", description: "You have already used a referral code." });
       return false;
+    }
+    if (applicantFullData.isReferralBonusPending) {
+        toast({ variant: "destructive", title: "Referral Pending", description: "A referral bonus is already pending for your account." });
+        return false;
     }
 
     let allUsers = getAllUsers();
@@ -482,11 +496,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         referredBy: referrer.id,
         isReferralBonusPending: true,
         referrerIdForPendingBonus: referrer.id,
-        hasAppliedReferral: true,
+        hasAppliedReferral: true, 
     };
     updateUser(applicantUpdates);
 
-    toast({ title: "Referral Code Applied!", description: \`Bonus will be unlocked after you complete your first offerwall task.\` });
+    toast({ title: "Referral Code Applied!", description: `Bonus will be unlocked after you complete your first offerwall task.` });
     return true;
   };
 
@@ -502,7 +516,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (currentUserData.isReferralBonusPending && currentUserData.referrerIdForPendingBonus && !currentUserData.hasCompletedFirstOfferwallTask) {
-      addCoins(REFERRAL_BONUS, 'Referral Bonus', \`Bonus for joining via \${currentUserData.referrerIdForPendingBonus}\`);
+      addCoins(REFERRAL_BONUS, 'Referral Bonus', `Bonus for joining via referral from ${currentUserData.referrerIdForPendingBonus}`);
       
       const referrerData = getFullUserFromStorage(currentUserData.referrerIdForPendingBonus);
       if (referrerData) {
@@ -511,10 +525,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const referrerNewReferralsMade = (Number(referrerData.referralsMade) || 0) + 1;
         
         const referrerTransaction: CoinTransaction = {
-          id: \`txn-ref-\${Date.now()}\`,
+          id: `txn-ref-${Date.now()}`,
           amount: REFERRAL_BONUS,
           type: 'Referral Bonus',
-          description: \`Bonus for referring \${currentUserData.name || currentUserData.id}\`,
+          description: `Bonus for referring ${currentUserData.name || currentUserData.id}`,
           date: new Date().toISOString(),
         };
         const referrerHistory = Array.isArray(referrerData.coinTransactionHistory) ? referrerData.coinTransactionHistory : [];
@@ -532,7 +546,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isReferralBonusPending: false,
       });
 
-      toast({ title: "Referral Bonus Unlocked!", description: \`You and your friend earned \${REFERRAL_BONUS} coins!\` });
+      toast({ title: "Referral Bonus Unlocked!", description: `You and your friend earned ${REFERRAL_BONUS} coins!` });
       return true;
     } else if (currentUserData.hasCompletedFirstOfferwallTask && !currentUserData.isReferralBonusPending) {
       toast({ title: "Offerwall Task Already Completed", description: "You've already completed your first offerwall task and received any pending referral bonus." });
@@ -555,7 +569,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
     }
 
-    const updatedUserFull = { ...currentUserData, ...updatedDetails };
+    const updatedUserFull = { ...currentUserData };
+    for (const key in updatedDetails) {
+      if (updatedDetails[key as keyof typeof updatedDetails] !== undefined) {
+        (updatedUserFull as any)[key] = updatedDetails[key as keyof typeof updatedDetails];
+      }
+    }
+
     const { password, ...userForState } = updatedUserFull;
 
     setUser(userForState);
@@ -570,21 +590,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     let allUsers = getAllUsers();
     let googleUserRaw = allUsers.find(u => u.email.toLowerCase() === mockGoogleUserEmail.toLowerCase());
+    const today = todayISOString();
 
     if (!googleUserRaw) {
       const newGoogleUser: User = {
-        id: \`user-google-\${Date.now()}\`,
+        id: `user-google-${Date.now()}`,
         email: mockGoogleUserEmail,
         name: mockGoogleUserName,
-        password: "mockpassword",
+        password: "mockpassword", 
         photoURL: mockGoogleUserPhotoURL,
         balance: 0, coins: 0, referralCode: generateReferralCode(), referralsMade: 0,
         hasRatedApp: false, gender: 'Not Specified',
         ageRange: 'Prefer not to say',
         notificationPreferences: { offers: true, promo: true, payments: true, updates: true },
         claimedReferralTiers: [], currentStreak: 0, lastStreakUpdate: "", adsWatchedToday: 0,
-        lastAdWatchDate: "", dailyCheckIns: [],
-        dailySpecialOffersCompletedIds: [], lastSpecialOfferResetDate: "", historicalSpecialOffers: [],
+        lastAdWatchDate: today, dailyCheckIns: [],
+        dailySpecialOffersCompletedIds: [], lastSpecialOfferResetDate: today, historicalSpecialOffers: [],
         specialBonusAdsWatched: 0, specialBonusCompleted: false, coinTransactionHistory: [],
         referredBy: null, isReferralBonusPending: false, referrerIdForPendingBonus: null, hasCompletedFirstOfferwallTask: false, hasAppliedReferral: false,
       };
@@ -593,21 +614,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       googleUserRaw = newGoogleUser;
     } else {
         let updatedGoogleUser = initializeUserFields(googleUserRaw);
-        updatedGoogleUser.photoURL = updatedGoogleUser.photoURL || mockGoogleUserPhotoURL;
-        updatedGoogleUser.password = updatedGoogleUser.password || "mockpassword";
+        updatedGoogleUser.photoURL = updatedGoogleUser.photoURL || mockGoogleUserPhotoURL; 
+        updatedGoogleUser.password = updatedGoogleUser.password || "mockpassword"; 
         updateUserInStorage(updatedGoogleUser.id, updatedGoogleUser);
         googleUserRaw = updatedGoogleUser;
     }
-    await login(googleUserRaw.email, googleUserRaw.password!);
+    await login(googleUserRaw.email, googleUserRaw.password!); 
+    toast({ title: "Signed in with Google (Simulated)", description: `Welcome, ${googleUserRaw.name}!`});
   };
 
   const getAllUsersForLeaderboard = (): User[] => {
+    if (typeof window === 'undefined') return [];
     const users = getAllUsers();
-    return users.map(u => {
-      const initializedUser = initializeUserFields(u);
-      const { password, ...userForDisplay } = initializedUser;
-      return userForDisplay;
-    }).sort((a, b) => (b.coins || 0) - (a.coins || 0));
+    return users
+      .map(u => {
+        const initializedUser = initializeUserFields(u); 
+        const { password, ...userForDisplay } = initializedUser;
+        return userForDisplay;
+      })
+      .sort((a, b) => (b.coins || 0) - (a.coins || 0));
   };
 
  const recordAdWatchAndCheckIn = async (): Promise<boolean> => {
@@ -622,18 +647,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
     }
 
-    let mutableUser = { ...currentUserData };
+    let mutableUser = { ...currentUserData }; 
     const today = todayISOString();
     const yesterday = yesterdayISOString();
 
     if (mutableUser.lastAdWatchDate !== today) {
       mutableUser.adsWatchedToday = 0;
-      // Don't set lastAdWatchDate here, only when an ad is actually watched.
     }
 
     if (mutableUser.adsWatchedToday >= MAX_ADS_PER_DAY) {
       toast({ title: "Ad Limit Reached", description: "You've watched all available ads for today." });
-      // Update user state only if lastAdWatchDate wasn't today to persist the reset if it happened.
       if (currentUserData.lastAdWatchDate !== today) {
         updateUser({ adsWatchedToday: 0, lastAdWatchDate: today });
       }
@@ -643,40 +666,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const rewardIndex = mutableUser.adsWatchedToday;
     const reward = AD_REWARDS_TIERED[rewardIndex < AD_REWARDS_TIERED.length ? rewardIndex : AD_REWARDS_TIERED.length - 1];
 
-    addCoins(reward, 'Daily Ad', \`Watched Ad #\${mutableUser.adsWatchedToday + 1}\`);
+    addCoins(reward, 'Daily Ad', `Watched Ad #${mutableUser.adsWatchedToday + 1}`);
+
+    const userAfterCoinAdd = getFullUserFromStorage(user.id);
+    if (!userAfterCoinAdd) return false; 
 
     let updatedFieldsForUser: Partial<User> = {
-        adsWatchedToday: mutableUser.adsWatchedToday + 1,
+        adsWatchedToday: (userAfterCoinAdd.adsWatchedToday || 0) + 1, 
         lastAdWatchDate: today,
     };
-
-    let hasCheckedInToday = mutableUser.dailyCheckIns.some(dateStr => {
+    
+    let hasCheckedInToday = (userAfterCoinAdd.dailyCheckIns || []).some(dateStr => {
         try { return isSameDay(parseISO(dateStr), new Date()); } catch { return false; }
     });
 
     if (!hasCheckedInToday) {
-      if (mutableUser.lastStreakUpdate === yesterday) {
-        updatedFieldsForUser.currentStreak = (Number(mutableUser.currentStreak) || 0) + 1;
-      } else if (mutableUser.lastStreakUpdate !== today) {
+      if (userAfterCoinAdd.lastStreakUpdate === yesterday) {
+        updatedFieldsForUser.currentStreak = (Number(userAfterCoinAdd.currentStreak) || 0) + 1;
+      } else if (userAfterCoinAdd.lastStreakUpdate !== today) { 
         updatedFieldsForUser.currentStreak = 1;
-      } else {
-        updatedFieldsForUser.currentStreak = Number(mutableUser.currentStreak) || 0;
+      } else { 
+        updatedFieldsForUser.currentStreak = Number(userAfterCoinAdd.currentStreak) || 0;
       }
       updatedFieldsForUser.lastStreakUpdate = today;
 
-      let newCheckIns = [today, ...mutableUser.dailyCheckIns.filter(d => d !== today)];
-      newCheckIns = Array.from(new Set(newCheckIns))
+      let newCheckIns = [today, ...(userAfterCoinAdd.dailyCheckIns || []).filter(d => d !== today)];
+      newCheckIns = Array.from(new Set(newCheckIns)) 
                          .map(dateStr => { try { return parseISO(dateStr); } catch { return null; }})
-                         .filter(date => date !== null && isValid(date))
-                         .sort((a,b) => b!.getTime() - a!.getTime())
-                         .slice(0, 7)
-                         .map(date => format(date!, 'yyyy-MM-dd'));
+                         .filter(date => date !== null && isValid(date)) 
+                         .sort((a,b) => b!.getTime() - a!.getTime()) 
+                         .slice(0, 7) 
+                         .map(date => format(date!, 'yyyy-MM-dd')); 
       updatedFieldsForUser.dailyCheckIns = newCheckIns;
     }
 
-    updateUser(updatedFieldsForUser);
+    updateUser(updatedFieldsForUser); 
 
-    toast({ title: "Reward Claimed!", description: \`You earned \${reward} coins!\` });
+    toast({ title: "Reward Claimed!", description: `You earned ${reward} coins!` });
     return true;
   };
 
@@ -691,44 +717,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    let mutableUser = { ...currentUserData };
-    let progress = {
-        dailySpecialOffersCompletedIds: Array.isArray(mutableUser.dailySpecialOffersCompletedIds) ? mutableUser.dailySpecialOffersCompletedIds : [],
-        lastSpecialOfferResetDate: mutableUser.lastSpecialOfferResetDate || "",
-        historicalSpecialOffers: Array.isArray(mutableUser.historicalSpecialOffers) ? mutableUser.historicalSpecialOffers : [],
-    };
+    let mutableUser = { ...currentUserData }; 
+    let dailyCompleted = Array.isArray(mutableUser.dailySpecialOffersCompletedIds) ? mutableUser.dailySpecialOffersCompletedIds : [];
+    let historicalCompleted = Array.isArray(mutableUser.historicalSpecialOffers) ? mutableUser.historicalSpecialOffers : [];
+    let lastResetDate = mutableUser.lastSpecialOfferResetDate || "";
 
     const today = todayISOString();
-    if (progress.lastSpecialOfferResetDate !== today) {
-        progress.dailySpecialOffersCompletedIds = [];
-        progress.lastSpecialOfferResetDate = today;
+    if (lastResetDate !== today) {
+        dailyCompleted = [];
+        lastResetDate = today;
     }
 
-    if (progress.dailySpecialOffersCompletedIds.includes(offerId)) {
+    if (dailyCompleted.includes(offerId)) {
       toast({ title: "Already Completed Today", description: "You have already completed this offer today." });
-      updateUser({
-          dailySpecialOffersCompletedIds: progress.dailySpecialOffersCompletedIds,
-          lastSpecialOfferResetDate: progress.lastSpecialOfferResetDate,
-      });
+      if (currentUserData.lastSpecialOfferResetDate !== today) {
+           updateUser({
+            dailySpecialOffersCompletedIds: [], 
+            lastSpecialOfferResetDate: today,
+          });
+      }
       return false;
     }
 
     const offerDetails = SPECIAL_OFFERS_CONFIG.find(o => o.id === offerId);
-    addCoins(coinReward, 'Special Offer', \`Completed: \${offerDetails?.title || offerId}\`);
+    addCoins(coinReward, 'Special Offer', `Completed: ${offerDetails?.title || offerId}`);
 
-    const newDailyCompletedIds = [...progress.dailySpecialOffersCompletedIds, offerId];
+    const newDailyCompletedIds = [...dailyCompleted, offerId];
     const newHistoricalEntry = { id: offerId, dateCompleted: today, coinsEarned: coinReward };
-    // Ensure historicalSpecialOffers is an array before spreading
-    const currentHistorical = Array.isArray(progress.historicalSpecialOffers) ? progress.historicalSpecialOffers : [];
-    const newHistoricalOffers = [newHistoricalEntry, ...currentHistorical].slice(0, 10);
+    const newHistoricalOffers = [newHistoricalEntry, ...historicalCompleted].slice(0, 10);
 
     updateUser({
       dailySpecialOffersCompletedIds: newDailyCompletedIds,
-      lastSpecialOfferResetDate: today,
+      lastSpecialOfferResetDate: lastResetDate, 
       historicalSpecialOffers: newHistoricalOffers,
     });
 
-    toast({ title: "Offer Completed!", description: \`You earned \${coinReward} coins!\` });
+    toast({ title: "Offer Completed!", description: `You earned ${coinReward} coins!` });
     return true;
   };
 
@@ -752,12 +776,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let fieldsToUpdate: Partial<User> = { specialBonusAdsWatched: newAdsWatched };
 
     if (newAdsWatched >= SPECIAL_BONUS_ADS_REQUIRED) {
-      fieldsToUpdate.specialBonusAdsWatched = SPECIAL_BONUS_ADS_REQUIRED;
+      fieldsToUpdate.specialBonusAdsWatched = SPECIAL_BONUS_ADS_REQUIRED; 
       fieldsToUpdate.specialBonusCompleted = true;
       addCoins(SPECIAL_BONUS_COIN_REWARD, 'Special Bonus', 'Special Ad Bonus Claimed');
-      toast({ title: "Special Bonus Claimed!", description: \`You earned \${SPECIAL_BONUS_COIN_REWARD} coins!\` });
+      toast({ title: "Special Bonus Claimed!", description: `You earned ${SPECIAL_BONUS_COIN_REWARD} coins!` });
     } else {
-      toast({ title: "Ad Watched!", description: \`Progress: \${newAdsWatched}/\${SPECIAL_BONUS_ADS_REQUIRED} ads for special bonus.\` });
+      toast({ title: "Ad Watched!", description: `Progress: ${newAdsWatched}/${SPECIAL_BONUS_ADS_REQUIRED} ads for special bonus.` });
     }
     updateUser(fieldsToUpdate);
     return true;
@@ -784,3 +808,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
