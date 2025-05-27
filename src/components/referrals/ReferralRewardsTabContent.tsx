@@ -12,14 +12,14 @@ const rewardTiers: RewardTier[] = [
   { id: '10_invites', invitesRequired: 10, type: 'coins', amount: 500, description: 'Win 500 coins' },
   { id: '50_invites', invitesRequired: 50, type: 'coins', amount: 3000, description: 'Win 3000 coins' },
   { id: '100_invites', invitesRequired: 100, type: 'coins', amount: 7500, description: 'Win 7500 coins' },
-  { 
-    id: '500_invites', 
-    invitesRequired: 500, 
-    type: 'physical', 
-    description: 'SanDisk 128GB Pen Drive', 
-    details: 'High-speed USB 2.0 pen drive with 128GB storage capacity.',
-    imageSrc: 'https://placehold.co/64x64/0D1117/7DF9FF.png?text=USB', // Placeholder for USB drive
-  },
+  // { 
+  //   id: '500_invites', 
+  //   invitesRequired: 500, 
+  //   type: 'physical', 
+  //   description: 'SanDisk 128GB Pen Drive', 
+  //   details: 'High-speed USB 2.0 pen drive with 128GB storage capacity.',
+  //   imageSrc: 'https://placehold.co/64x64/0D1117/7DF9FF.png?text=USB', // Placeholder for USB drive
+  // }, Removed this tier
 ];
 
 export function ReferralRewardsTabContent() {
@@ -34,7 +34,7 @@ export function ReferralRewardsTabContent() {
 
     if (user.referralsMade >= tier.invitesRequired && !user.claimedReferralTiers.includes(tierId)) {
       if (tier.type === 'coins' && tier.amount) {
-        addCoins(tier.amount);
+        addCoins(tier.amount, "Referral Bonus", `Claimed ${tier.description} reward`);
         toast({ title: "Reward Claimed!", description: `${tier.amount} coins added to your balance.` });
       } else if (tier.type === 'physical') {
         toast({ title: "Reward Claimed!", description: `Congratulations on earning the ${tier.description}! We'll be in touch regarding your reward.` });
@@ -57,12 +57,12 @@ export function ReferralRewardsTabContent() {
         <CardContent className="flex items-center justify-between p-6 pt-2">
           <div className="text-center">
             <Coins className="h-10 w-10 text-yellow-400 mx-auto mb-1" />
-            <p className="text-2xl font-bold text-foreground">{user.referralsMade}</p>
-            <p className="text-xs text-muted-foreground">Total Successful Invites</p>
+            <p className="text-2xl font-bold text-foreground">{user.coins}</p> {/* Changed from referralsMade to coins for balance display */}
+            <p className="text-xs text-muted-foreground">Total Coins</p>
           </div>
           <div className="text-center">
             <Users className="h-10 w-10 text-accent mx-auto mb-1" />
-             <p className="text-2xl font-bold text-foreground">+{user.referralsMade}</p>
+             <p className="text-2xl font-bold text-foreground">{user.referralsMade}</p>
             <p className="text-xs text-muted-foreground">Friends Invited</p>
           </div>
         </CardContent>
