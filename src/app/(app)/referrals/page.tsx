@@ -49,19 +49,23 @@ export default function ReferralsPage() {
         </TabsList>
         <TabsContent value="invite">
           <Card className="border-border shadow-sm mt-4">
-            <CardHeader>
-                <CardTitle className="text-xl font-semibold text-primary flex items-center">
+            <CardContent className="space-y-6 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <ReferralCodeCard />
+                <ApplyReferralCard />
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-xl font-semibold text-primary flex items-center mb-4">
                     <Info className="mr-2 h-6 w-6" />
                     How It Works
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+                </h3>
                 <ul className="space-y-3 text-sm text-muted-foreground list-inside">
                     <li className="flex items-start">
                         <Share2 className="h-5 w-5 mr-3 mt-0.5 text-primary shrink-0" />
                         <div>
                             <span className="font-medium text-foreground">Step 1: Share Your Code</span><br />
-                            Find your unique referral code below and share it with your friends.
+                            Find your unique referral code above and share it with your friends.
                         </div>
                     </li>
                     <li className="flex items-start">
@@ -79,10 +83,6 @@ export default function ReferralsPage() {
                         </div>
                     </li>
                 </ul>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border">
-                <ReferralCodeCard />
-                <ApplyReferralCard />
               </div>
             </CardContent>
           </Card>
