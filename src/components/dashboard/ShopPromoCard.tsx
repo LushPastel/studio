@@ -4,18 +4,18 @@
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, ShoppingBag } from "lucide-react"; // ShoppingBag can be re-added if desired
+import { ArrowRight, ShoppingBag } from "lucide-react";
 
 export function ShopPromoCard() {
   return (
     <Card className="shadow-lg border-primary/30">
       <CardHeader className="p-6">
         <CardTitle className="text-2xl md:text-3xl font-bold text-foreground flex items-center">
-          <ShoppingBag className="mr-3 h-8 w-8 text-primary" /> {/* Icon added here */}
+          <ShoppingBag className="mr-3 h-8 w-8 text-primary" />
           Explore Our Shop
         </CardTitle>
         <CardDescription className="text-muted-foreground mt-2">
-          Find amazing deals and exclusive products.
+          Find amazing deals and exclusive products. Redeem your coins for gift cards!
         </CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-0">

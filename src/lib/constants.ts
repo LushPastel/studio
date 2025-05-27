@@ -1,14 +1,14 @@
 
-export const MIN_WITHDRAWAL_AMOUNT = 5000; // Was 100, then 5000 based on T&C
-export const REFERRAL_BONUS = 50; // 50 Coins for both referrer and new user
+export const MIN_WITHDRAWAL_AMOUNT = 5000;
+export const REFERRAL_BONUS = 50;
 export const APP_NAME = "CashWhiz";
 export const SUPPORT_EMAIL = "cashwhiz.helpdesk@gmail.com";
 export const SUPPORT_EMAIL_SUBJECT = "CashWhiz App Support Request";
 
 // Daily Streak and Ad Watch constants
 export const MAX_ADS_PER_DAY = 7;
-export const AD_REWARDS_TIERED = [5, 12, 20, 27, 35, 40, 50]; // Up to 7 rewards
-export const AD_DURATION_SECONDS = 5; // Simulate 5 second ad duration
+export const AD_REWARDS_TIERED = [5, 12, 20, 27, 35, 40, 50];
+export const AD_DURATION_SECONDS = 5;
 
 // Special Offer constants
 export const SPECIAL_OFFERS_CONFIG = [
@@ -17,7 +17,32 @@ export const SPECIAL_OFFERS_CONFIG = [
   { id: 'special_offer_3', title: 'Final Jackpot!', description: 'One last ad for the grand prize! You\'re almost there!', coins: 90, imageHint: 'jackpot win prize', actionType: 'watchAd' },
 ];
 
-// Special Bonus Ad constants (Not currently used by SpecialBonusAdCard after simplification)
+// Gift Card Shop constants
+export const GIFT_CARDS_AVAILABLE = [
+  {
+    id: 'gp_10',
+    name: 'Google Play Gift Card ₹10',
+    imageHint: 'google play logo',
+    coinPrice: 2000,
+    valueInRupees: 10,
+  },
+  {
+    id: 'gp_50',
+    name: 'Google Play Gift Card ₹50',
+    imageHint: 'google play logo',
+    coinPrice: 10000,
+    valueInRupees: 50,
+  },
+  {
+    id: 'gp_100',
+    name: 'Google Play Gift Card ₹100',
+    imageHint: 'google play logo',
+    coinPrice: 20000,
+    valueInRupees: 100,
+  },
+];
+
+// Special Bonus Ad constants (Placeholder, not actively used by a card)
 export const SPECIAL_BONUS_ADS_REQUIRED = 5;
 export const SPECIAL_BONUS_COIN_REWARD = 50;
 
