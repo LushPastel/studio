@@ -7,7 +7,7 @@ import { ReferralRewardsTabContent } from '@/components/referrals/ReferralReward
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
-import { Hourglass, Info, Share2, UserPlus, Award } from 'lucide-react';
+import { Hourglass, Info, Share2, UserPlus, Award, Zap } from 'lucide-react'; // Added Zap for offerwall task
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { REFERRAL_BONUS } from '@/lib/constants';
@@ -38,7 +38,7 @@ export default function ReferralsPage() {
           Refer & Earn
         </h2>
         <p className="text-muted-foreground">
-          Invite friends and earn rewards.
+          Invite friends and earn rewards when they complete their first offerwall task.
         </p>
       </div>
 
@@ -76,10 +76,17 @@ export default function ReferralsPage() {
                         </div>
                     </li>
                     <li className="flex items-start">
+                        <Zap className="h-5 w-5 mr-3 mt-0.5 text-primary shrink-0" />
+                        <div>
+                            <span className="font-medium text-foreground">Step 3: Friend Completes an Offerwall Task</span><br />
+                            After signing up and applying your code, your friend needs to complete their first task from an offerwall.
+                        </div>
+                    </li>
+                    <li className="flex items-start">
                         <Award className="h-5 w-5 mr-3 mt-0.5 text-primary shrink-0" />
                         <div>
-                            <span className="font-medium text-foreground">Step 3: You Both Earn!</span><br />
-                            Once your friend successfully applies the code, both of you will receive {REFERRAL_BONUS} coins as a bonus!
+                            <span className="font-medium text-foreground">Step 4: You Both Earn!</span><br />
+                            Once your friend completes their first offerwall task, both of you will receive {REFERRAL_BONUS} coins as a bonus!
                         </div>
                     </li>
                 </ul>
