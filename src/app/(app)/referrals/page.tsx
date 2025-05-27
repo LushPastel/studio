@@ -6,10 +6,11 @@ import { ApplyReferralCard } from '@/components/referrals/apply-referral-card';
 import { ReferralRewardsTabContent } from '@/components/referrals/ReferralRewardsTabContent';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import React, { useEffect } from 'react'; // Added React import
-import { Hourglass } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Hourglass, Info, Share2, UserPlus, Award } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { REFERRAL_BONUS } from '@/lib/constants';
 
 
 export default function ReferralsPage() {
@@ -37,22 +38,49 @@ export default function ReferralsPage() {
           Refer & Earn
         </h2>
         <p className="text-muted-foreground">
-          Invite friends and earn rewards based on milestones.
+          Invite friends and earn rewards.
         </p>
       </div>
 
       <Tabs defaultValue="invite" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-card border border-border">
-          <TabsTrigger value="invite" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Invite</TabsTrigger>
-          <TabsTrigger value="rewards" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Rewards</TabsTrigger>
+          <TabsTrigger value="invite" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Invite Friends</TabsTrigger>
+          <TabsTrigger value="rewards" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Your Rewards</TabsTrigger>
         </TabsList>
         <TabsContent value="invite">
           <Card className="border-border shadow-sm mt-4">
-            <CardContent className="p-6 space-y-6">
-               <p className="text-muted-foreground text-center">
-                Share your referral code with friends. When they sign up, you both get a bonus!
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <CardHeader>
+                <CardTitle className="text-xl font-semibold text-primary flex items-center">
+                    <Info className="mr-2 h-6 w-6" />
+                    How It Works
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <ul className="space-y-3 text-sm text-muted-foreground list-inside">
+                    <li className="flex items-start">
+                        <Share2 className="h-5 w-5 mr-3 mt-0.5 text-primary shrink-0" />
+                        <div>
+                            <span className="font-medium text-foreground">Step 1: Share Your Code</span><br />
+                            Find your unique referral code below and share it with your friends.
+                        </div>
+                    </li>
+                    <li className="flex items-start">
+                        <UserPlus className="h-5 w-5 mr-3 mt-0.5 text-primary shrink-0" />
+                        <div>
+                            <span className="font-medium text-foreground">Step 2: Friend Signs Up or Applies Code</span><br />
+                            Your friend uses your code when they sign up, or applies it in their referral section if they already have an account.
+                        </div>
+                    </li>
+                    <li className="flex items-start">
+                        <Award className="h-5 w-5 mr-3 mt-0.5 text-primary shrink-0" />
+                        <div>
+                            <span className="font-medium text-foreground">Step 3: You Both Earn!</span><br />
+                            Once your friend successfully applies the code, both of you will receive {REFERRAL_BONUS} coins as a bonus!
+                        </div>
+                    </li>
+                </ul>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-border">
                 <ReferralCodeCard />
                 <ApplyReferralCard />
               </div>
