@@ -1,29 +1,7 @@
 
 {
-  "name": "cashwhiz-functions",
-  "description": "Cloud Functions for CashWhiz App",
+  "name": "cashwhiz-functions-placeholder",
+  "description": "Placeholder for backend functions if not using Firebase Functions.",
   "main": "index.js",
-  "engines": {
-    "node": "18"
-  },
-  "dependencies": {
-    "firebase-admin": "^11.8.0",
-    "firebase-functions": "^4.4.0",
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
-  },
-  "devDependencies": {
-    "eslint": "^8.15.0",
-    "eslint-config-google": "^0.14.0",
-    "firebase-functions-test": "^3.0.0"
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "serve": "firebase emulators:start --only functions",
-    "shell": "firebase functions:shell",
-    "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
-  },
   "private": true
 }

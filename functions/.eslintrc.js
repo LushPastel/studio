@@ -1,4 +1,6 @@
 
+// This file can be removed if the 'functions' directory is removed.
+// Placeholder content if the file is kept.
 module.exports = {
   root: true,
   env: {
