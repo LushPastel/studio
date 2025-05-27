@@ -26,8 +26,8 @@ body {
     --muted: 220 30% 20%;
     --muted-foreground: 220 20% 60%;
 
-    --accent: 180 100% 50%; /* Neon Cyan/Teal */
-    --accent-foreground: 220 30% 10%; /* Dark for text on accent */
+    --accent: 200 100% 50%; /* Bright Neon Blue (Azure-ish) - WAS Neon Cyan/Teal */
+    --accent-foreground: 220 30% 10%; /* Dark for text on accent - WAS Dark for text on accent */
 
     --destructive: 0 80% 55%; /* Neon-ish Red */
     --destructive-foreground: 0 0% 98%;
@@ -37,7 +37,7 @@ body {
     --ring: 200 100% 50%; /* Neon Blue for focus rings */
     
     --chart-1: 200 100% 50%; /* Neon Blue for charts */
-    --chart-2: 180 100% 50%; /* Neon Cyan/Teal for charts */
+    --chart-2: 180 100% 50%; /* Neon Cyan/Teal for charts - Kept for variety if needed */
     --chart-3: 220 20% 60%;
     --chart-4: 0 80% 55%;
     --chart-5: 220 20% 80%;
@@ -46,7 +46,7 @@ body {
 
     /* Sidebar colors adjusted to match the new theme */
     --sidebar-background: 220 35% 8%; /* Darker Navy for sidebar */
-    --sidebar-foreground: 180 90% 70%; /* Lighter Neon Cyan/Teal for text */
+    --sidebar-foreground: 200 100% 70%; /* Lighter Neon Blue for text */
     --sidebar-primary: 200 100% 50%; /* Neon Blue for active items in sidebar */
     --sidebar-primary-foreground: 220 30% 10%;
     --sidebar-accent: 220 30% 15%; /* Hover/accent within sidebar */
@@ -74,7 +74,7 @@ body {
     --muted: 220 30% 20%;
     --muted-foreground: 220 20% 60%;
 
-    --accent: 180 100% 50%;
+    --accent: 200 100% 50%; /* Bright Neon Blue (Azure-ish) */
     --accent-foreground: 220 30% 10%;
 
     --destructive: 0 80% 55%;
@@ -85,13 +85,13 @@ body {
     --ring: 200 100% 50%;
 
     --chart-1: 200 100% 50%;
-    --chart-2: 180 100% 50%;
+    --chart-2: 180 100% 50%; 
     --chart-3: 220 20% 60%;
     --chart-4: 0 80% 55%;
     --chart-5: 220 20% 80%;
     
     --sidebar-background: 220 35% 8%;
-    --sidebar-foreground: 180 90% 70%;
+    --sidebar-foreground: 200 100% 70%;
     --sidebar-primary: 200 100% 50%;
     --sidebar-primary-foreground: 220 30% 10%;
     --sidebar-accent: 220 30% 15%;
