@@ -5,29 +5,75 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Coins as CoinsIcon, CheckCircle, XCircle, Hourglass } from 'lucide-react';
+import { ArrowLeft, Coins as CoinsIcon, CheckCircle, XCircle, Hourglass, Tv2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { SPECIAL_OFFERS_CONFIG, AD_DURATION_SECONDS } from '@/lib/constants';
-import { useRouter } from 'next/navigation'; // For redirecting
+import { useRouter } from 'next/navigation';
+import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface OfferItemProps {
   offer: typeof SPECIAL_OFFERS_CONFIG[0];
-  isCompleted: boolean;
-  isActive: boolean;
-  onActionClick: () => void;
+  isCompletedForToday?: boolean; // For active tab - whether it's done today
+  isHistoricallyCompleted?: boolean; // For completed tab - general completion
+  dateCompleted?: string; // For historical display
+  coinsEarnedForHistory?: number; // For historical display
+  isActive?: boolean; // Whether it's the current actionable offer or locked
+  onActionClick?: () => void;
 }
 
-const OfferItem: React.FC<OfferItemProps> = ({ offer, isCompleted, isActive, onActionClick }) => {
+const OfferItem: React.FC<OfferItemProps> = ({ 
+  offer, 
+  isCompletedForToday,
+  isHistoricallyCompleted,
+  dateCompleted,
+  coinsEarnedForHistory,
+  isActive, 
+  onActionClick 
+}) => {
+  if (isHistoricallyCompleted) {
+    // View for "Completed" tab (historical)
+    return (
+      <Card className={cn("shadow-md border-border/30 bg-muted/30 opacity-80")}>
+        <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-4">
+          <Image
+            src={`https://placehold.co/80x80.png?text=${offer.id.slice(-1)}`}
+            alt={offer.title}
+            width={80}
+            height={80}
+            className="rounded-lg bg-muted p-1 object-cover"
+            data-ai-hint={offer.imageHint}
+          />
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-lg font-semibold text-foreground">{offer.title}</h3>
+            <p className="text-sm text-muted-foreground mb-1">{offer.description}</p>
+            {dateCompleted && (
+              <p className="text-xs text-muted-foreground">
+                Completed: {format(parseISO(dateCompleted), "MMM d, yyyy")}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="flex items-center justify-end text-green-500 font-medium">
+              <CoinsIcon className="h-4 w-4 mr-1" /> +{coinsEarnedForHistory || offer.coins} Coins
+            </div>
+            <CheckCircle className="h-6 w-6 text-green-500 mt-1 ml-auto" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // View for "Active" tab (daily offers)
   return (
-    <Card className={cn("shadow-md border-border transition-all", isActive && "border-primary ring-2 ring-primary", isCompleted && "bg-muted/30 opacity-70")}>
+    <Card className={cn("shadow-md border-border transition-all", isActive && !isCompletedForToday && "border-primary ring-2 ring-primary", isCompletedForToday && "bg-muted/30 opacity-70")}>
       <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-4">
         <Image
-          src={`https://placehold.co/80x80.png?text=${offer.id.slice(-1)}`} // Simple placeholder based on ID
+          src={`https://placehold.co/80x80.png?text=${offer.id.slice(-1)}`}
           alt={offer.title}
           width={80}
           height={80}
@@ -42,9 +88,9 @@ const OfferItem: React.FC<OfferItemProps> = ({ offer, isCompleted, isActive, onA
           </div>
         </div>
         <div className="w-full sm:w-auto mt-2 sm:mt-0">
-          {isCompleted ? (
+          {isCompletedForToday ? (
             <Button variant="ghost" disabled className="w-full text-green-500">
-              <CheckCircle className="mr-2 h-5 w-5" /> Completed
+              <CheckCircle className="mr-2 h-5 w-5" /> Completed Today
             </Button>
           ) : isActive ? (
             <Button onClick={onActionClick} className="w-full bg-primary hover:bg-primary/90">
@@ -62,7 +108,7 @@ const OfferItem: React.FC<OfferItemProps> = ({ offer, isCompleted, isActive, onA
 };
 
 export default function SpecialOfferPage() {
-  const { user, isAuthenticated, isLoadingAuth, completeSpecialOffer, addCoins } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth, completeSpecialOffer } = useAuth();
   const router = useRouter();
 
   const [isAdModalOpen, setIsAdModalOpen] = useState(false);
@@ -107,15 +153,15 @@ export default function SpecialOfferPage() {
     );
   }
 
-  const { currentOfferIndex, completedOfferIds } = user.specialOfferProgress;
-  const offersCompletedCount = completedOfferIds.length;
+  const { dailySpecialOffersCompletedIds, historicalSpecialOffers, coins: userCoins } = user;
+  const offersCompletedTodayCount = dailySpecialOffersCompletedIds.length;
 
-  const activeOffers = SPECIAL_OFFERS_CONFIG.filter(offer => !completedOfferIds.includes(offer.id));
-  const completedOffers = SPECIAL_OFFERS_CONFIG.filter(offer => completedOfferIds.includes(offer.id));
-  
-  const currentActiveOffer = SPECIAL_OFFERS_CONFIG[currentOfferIndex];
 
   const handleOfferAction = (offer: typeof SPECIAL_OFFERS_CONFIG[0]) => {
+    if (dailySpecialOffersCompletedIds.includes(offer.id)) {
+        // Already completed today, ideally button should be disabled
+        return;
+    }
     if (offer.actionType === 'watchAd') {
       setCurrentOfferForModal(offer);
       setIsAdModalOpen(true);
@@ -140,10 +186,10 @@ export default function SpecialOfferPage() {
           <Link href="/home" className="p-2 rounded-full hover:bg-muted transition-colors">
             <ArrowLeft className="h-6 w-6 text-foreground" />
           </Link>
-          <h1 className="text-xl font-bold text-primary">Special Offer</h1>
+          <h1 className="text-xl font-bold text-primary">Special Offers</h1>
           <div className="flex items-center space-x-1 text-yellow-400">
             <CoinsIcon className="h-5 w-5" />
-            <span className="font-semibold text-foreground">{user.coins}</span>
+            <span className="font-semibold text-foreground">{userCoins}</span>
           </div>
         </div>
       </div>
@@ -151,67 +197,59 @@ export default function SpecialOfferPage() {
       <div className="container mx-auto space-y-6 px-4">
         <Card className="bg-primary/10 border-primary/30 text-center">
           <CardContent className="p-6">
-            <p className="text-6xl font-extrabold text-primary">{offersCompletedCount}</p>
-            <p className="text-lg text-foreground">Offers Completed</p>
+            <p className="text-6xl font-extrabold text-primary">{offersCompletedTodayCount}</p>
+            <p className="text-lg text-foreground">Offers Completed Today</p>
+            <p className="text-sm text-muted-foreground">({SPECIAL_OFFERS_CONFIG.length} available daily)</p>
           </CardContent>
         </Card>
 
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-muted border-border">
-            <TabsTrigger value="active" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Active</TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Completed</TabsTrigger>
+            <TabsTrigger value="active" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Daily Offers</TabsTrigger>
+            <TabsTrigger value="completed" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">History</TabsTrigger>
           </TabsList>
           
           <TabsContent value="active" className="mt-4 space-y-4">
-            {currentActiveOffer ? (
-              <OfferItem
-                offer={currentActiveOffer}
-                isCompleted={false}
-                isActive={true}
-                onActionClick={() => handleOfferAction(currentActiveOffer)}
-              />
-            ) : (
-              <Card className="text-center">
-                <CardContent className="p-6">
-                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                  <p className="text-lg font-semibold text-foreground">All special offers completed!</p>
-                  <p className="text-muted-foreground">Check back later for more.</p>
-                </CardContent>
-              </Card>
-            )}
-             {/* Display next locked offers for context, if any */}
-             {SPECIAL_OFFERS_CONFIG.map((offer, index) => {
-                if (index > currentOfferIndex && index < SPECIAL_OFFERS_CONFIG.length) {
-                    return (
-                        <OfferItem
-                            key={offer.id}
-                            offer={offer}
-                            isCompleted={false}
-                            isActive={false}
-                            onActionClick={() => {}} // No action for locked
-                        />
-                    );
-                }
-                return null;
+            {SPECIAL_OFFERS_CONFIG.map((offer, index) => {
+                const isCompletedToday = dailySpecialOffersCompletedIds.includes(offer.id);
+                // For daily offers, "isActive" simply means it's not completed today.
+                // If you had a sequential unlocking within the daily set, this would be more complex.
+                const isActive = !isCompletedToday; 
+
+                return (
+                    <OfferItem
+                        key={offer.id}
+                        offer={offer}
+                        isCompletedForToday={isCompletedToday}
+                        isActive={isActive} 
+                        onActionClick={() => handleOfferAction(offer)}
+                    />
+                );
             })}
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4 space-y-4">
-            {completedOffers.length > 0 ? (
-              completedOffers.map(offer => (
-                <OfferItem
-                  key={offer.id}
-                  offer={offer}
-                  isCompleted={true}
-                  isActive={false}
-                  onActionClick={() => {}} // No action
-                />
-              ))
+            {historicalSpecialOffers.length > 0 ? (
+              historicalSpecialOffers.map(completed => {
+                const originalOffer = SPECIAL_OFFERS_CONFIG.find(o => o.id === completed.id);
+                if (!originalOffer) return null; // Should not happen if data is consistent
+                return (
+                  <OfferItem
+                    key={`${completed.id}-${completed.dateCompleted}`} // Ensure unique key for list
+                    offer={originalOffer}
+                    isHistoricallyCompleted={true}
+                    dateCompleted={completed.dateCompleted}
+                    coinsEarnedForHistory={completed.coinsEarned}
+                    isActive={false} // Not actionable from history
+                    onActionClick={() => {}} 
+                  />
+                );
+              })
             ) : (
               <Card className="text-center">
                 <CardContent className="p-6">
                   <XCircle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">No offers completed yet.</p>
+                  <p className="text-muted-foreground">No offers completed yet in history.</p>
                 </CardContent>
               </Card>
             )}
@@ -266,7 +304,6 @@ export default function SpecialOfferPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
