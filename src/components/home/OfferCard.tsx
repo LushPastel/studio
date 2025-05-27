@@ -16,6 +16,7 @@ interface OfferCardProps {
   icon?: ElementType; // Lucide icon
   customIconElement?: React.ReactNode; // For text-based logos or complex SVGs
   showStartButton?: boolean;
+  startButtonText?: string; // New prop for button text
   isRecommended?: boolean;
   cardType?: 'default' | 'seeAll';
   className?: string; // For background, text color, etc.
@@ -29,6 +30,7 @@ export function OfferCard({
   icon: IconComponent,
   customIconElement,
   showStartButton = true,
+  startButtonText = "Start", // Default to "Start"
   isRecommended = false,
   cardType = 'default',
   className,
@@ -55,14 +57,14 @@ export function OfferCard({
       className={cn(
         "shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col group overflow-hidden rounded-2xl h-full text-foreground",
         className,
-        href || onClickAction ? 'cursor-pointer' : '' 
+        href || onClickAction ? 'cursor-pointer' : ''
       )}
       onClick={!href ? handleClick : undefined} // Click handled by Link if href exists
     >
       {isRecommended && cardType === 'default' && (
         <Badge variant="default" className="absolute top-3 right-3 bg-orange-500 text-white border-orange-500 shadow-md z-10">RECOMMENDED</Badge>
       )}
-      
+
       {cardType === 'seeAll' ? (
         <CardContent className="flex flex-col items-center justify-center p-4 flex-grow">
           <span className="text-lg font-semibold mb-2">{title}</span>
@@ -82,7 +84,7 @@ export function OfferCard({
           {showStartButton && (
             <CardFooter className="p-2">
               <Button variant="ghost" className="w-full justify-center bg-white/20 hover:bg-white/30 text-current backdrop-blur-sm rounded-lg py-1.5 text-sm">
-                Start <ArrowRight className="ml-2 h-4 w-4" />
+                {startButtonText} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>
           )}
